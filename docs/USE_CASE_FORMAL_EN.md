@@ -1,4 +1,4 @@
-# USE CASE: Automatic Trip Expense Splitting
+mo# USE CASE: Automatic Trip Expense Splitting
 
 ---
 
