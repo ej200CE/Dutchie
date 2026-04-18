@@ -1,0 +1,40 @@
+# Secrets — never commit real values
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs & temp
+*.log
+tmp/
+temp/
+.cache/
+
+# Dependencies & builds (adjust when you pick a stack)
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+*.egg-info/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env / tooling
+*.local
