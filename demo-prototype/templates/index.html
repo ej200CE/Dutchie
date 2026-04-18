@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Billion demo prototype</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #fff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --person-fill: #bfdbfe;
+      --person-stroke: #1d4ed8;
+      --good-fill: #fde68a;
+      --good-stroke: #b45309;
+      --cash: #0f766e;
+      --contrib: #6d28d9;
+      --settle: #e11d48;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      line-height: 1.45;
+      color: var(--text);
+      background: var(--bg);
+    }
+    body { margin: 0; padding: 1rem 1.25rem 2rem; max-width: 58rem; margin-inline: auto; }
+    h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+    h2 { font-size: 1.05rem; margin: 1.75rem 0 0.6rem; font-weight: 650; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; align-items: center; }
+    button, .btn {
+      background: #1e293b; color: #f1f5f9; border: none; padding: 0.5rem 0.85rem;
+      border-radius: 8px; cursor: pointer; font-size: 0.875rem; font-weight: 500;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button.secondary { background: #475569; }
+    pre {
+      background: var(--surface); padding: 0.85rem; border-radius: 10px; overflow: auto;
+      font-size: 0.78rem; border: 1px solid #e2e8f0;
+    }
+    .err { color: #b91c1c; font-weight: 600; }
+    .ok { color: #047857; font-weight: 600; }
+    .muted { color: var(--muted); font-size: 0.88rem; }
+    #graph-wrap {
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 0.5rem;
+      box-shadow: 0 1px 3px rgb(15 23 42 / 6%);
+    }
+    #graph-svg { width: 100%; height: auto; display: block; min-height: 320px; }
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; font-size: 0.8rem; margin: 0.5rem 0 0.75rem;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .swatch { width: 28px; height: 4px; border-radius: 2px; display: inline-block; }
+    .swatch.cash { background: var(--cash); height: 3px; }
+    .swatch.contrib { background: var(--contrib); height: 3px; background: repeating-linear-gradient(90deg, var(--contrib), var(--contrib) 4px, transparent 4px, transparent 7px); }
+    .swatch.settle { background: var(--settle); height: 3px; border: 1px dashed var(--settle); background: none; }
+    #compute-board { margin-top: 1rem; }
+    .compute-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .person-card {
+      background: var(--surface);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+    }
+    .person-card h3 { margin: 0 0 0.5rem; font-size: 1rem; }
+    .person-card dl { margin: 0; font-size: 0.82rem; }
+    .person-card dt { color: var(--muted); font-weight: 500; margin-top: 0.35rem; }
+    .person-card dt:first-child { margin-top: 0; }
+    .person-card dd { margin: 0.1rem 0 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .person-card .net-pos { color: #047857; }
+    .person-card .net-neg { color: #b91c1c; }
+    .person-card .net-zero { color: var(--muted); }
+    .transfers {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      border-radius: 10px;
+      font-size: 0.88rem;
+    }
+    .transfers h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+    .transfers ul { margin: 0; padding-left: 1.2rem; }
+    details { margin-top: 1rem; }
+    summary { cursor: pointer; color: var(--muted); font-size: 0.88rem; }
+  </style>
+</head>
+<body>
+  <h1>Billion idea — demo prototype</h1>
+  <p class="muted">Load the sample graph to see people (blue), shared costs (gold), <strong>cash paid</strong> (teal), and <strong>contribution weights</strong> (violet dashes). Run <strong>Compute</strong> for fair-share euros per person and settlement transfers.</p>
+
+  {% if error %}
+  <p class="err">{{ error }}</p>
+  {% endif %}
+  {% if locked and compute and compute.success %}
+  <p class="ok">Compute complete — amounts below; demo locks further compute.</p>
+  {% endif %}
+
+  <h2>Actions</h2>
+  <div class="row">
+    <form method="post" action="/actions/reset"><button type="submit" class="secondary">Reset</button></form>
+    <form method="post" action="/actions/load-event"><button type="submit">1. Load event</button></form>
+    <form method="post" action="/actions/ingest-stubs"><button type="submit">2. Run stub ingestors</button></form>
+    <form method="post" action="/actions/load-graph-sample"><button type="submit">3a. Load demo graph</button></form>
+    <form method="post" action="/actions/apply-graph-patch"><button type="submit">3b. Apply GraphPatch</button></form>
+    <form method="post" action="/actions/compute"><button type="submit" {% if locked %}disabled{% endif %}>4. Compute</button></form>
+  </div>
+
+  <h2>Graph</h2>
+  <div class="legend" id="graph-legend" aria-label="Edge legend">
+    <span><i class="swatch cash"></i> Cash to good (amount)</span>
+    <span><i class="swatch contrib"></i> Contribution weight</span>
+    <span><i class="swatch settle"></i> Suggested transfer (after compute)</span>
+  </div>
+  <div id="graph-wrap">
+    <svg id="graph-svg" viewBox="0 0 920 400" role="img" aria-label="Expense graph"></svg>
+  </div>
+  <p class="muted" id="graph-empty" hidden>No graph loaded yet — use “Load demo graph”.</p>
+
+  <div id="compute-board"></div>
+
+  <h2>Raw data</h2>
+  <details>
+    <summary>Event, evidence, graph JSON, compute JSON</summary>
+    <p class="muted">Event</p>
+    <pre>{{ event | tojson(indent=2) if event else "{}" }}</pre>
+    <p class="muted">Evidence bag ({{ evidences | length }})</p>
+    <pre>{{ evidences | tojson(indent=2) }}</pre>
+    <p class="muted">Graph</p>
+    <pre>{{ graph | tojson(indent=2) if graph else "null" }}</pre>
+    <p class="muted">Compute</p>
+    <pre>{{ compute | tojson(indent=2) if compute else "null" }}</pre>
+  </details>
+
+  <p class="muted"><a href="/api/state">/api/state</a> · <a href="/health">/health</a></p>
+
+  <script type="application/json" id="demo-graph-data">{{ graph | tojson }}</script>
+  <script type="application/json" id="demo-compute-data">{{ compute | tojson }}</script>
+  <script>
+(function () {
+  function readJson(id) {
+    var el = document.getElementById(id);
+    if (!el || !el.textContent.trim()) return null;
+    try { return JSON.parse(el.textContent); } catch (e) { return null; }
+  }
+
+  function eur(cents) {
+    if (cents == null || isNaN(cents)) return "—";
+    var n = Number(cents) / 100;
+    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " \u20ac";
+  }
+
+  function layout(graph) {
+    if (!graph || !graph.nodes) return null;
+    var persons = graph.nodes.filter(function (n) { return n.kind === "person"; });
+    var goods = graph.nodes.filter(function (n) { return n.kind === "good"; });
+    var W = 920, H = 400;
+    var positions = {};
+    var py = 308, gy = 102;
+    var i;
+    var pw = W / (persons.length + 1);
+    for (i = 0; i < persons.length; i++) {
+      var p = persons[i];
+      positions[p.id] = { x: pw * (i + 1), y: py, r: 36, kind: "person", node: p };
+    }
+    var gw = W / (goods.length + 1);
+    for (i = 0; i < goods.length; i++) {
+      var g = goods[i];
+      positions[g.id] = { x: gw * (i + 1), y: gy, r: 44, kind: "good", node: g };
+    }
+    return { positions: positions, W: W, H: H, persons: persons, goods: goods };
+  }
+
+  function edgeEndpoints(edge, positions) {
+    if (edge.kind === "cash_flow" && edge.target === "good") {
+      return { x1: positions[edge.from_id].x, y1: positions[edge.from_id].y, x2: positions[edge.to_id].x, y2: positions[edge.to_id].y };
+    }
+    if (edge.kind === "contribution") {
+      return { x1: positions[edge.person_id].x, y1: positions[edge.person_id].y, x2: positions[edge.good_id].x, y2: positions[edge.good_id].y };
+    }
+    return null;
+  }
+
+  function groupOffsets(edges, positions) {
+    var keyFn = function (e) {
+      if (e.kind === "cash_flow") return e.from_id + "->" + e.to_id + ":cash";
+      if (e.kind === "contribution") return e.person_id + "->" + e.good_id + ":c";
+      return "";
+    };
+    var groups = {};
+    edges.forEach(function (e) {
+      var k = keyFn(e);
+      if (!k || !edgeEndpoints(e, positions)) return;
+      if (!groups[k]) groups[k] = [];
+      groups[k].push(e);
+    });
+    var map = {};
+    Object.keys(groups).forEach(function (k) {
+      var list = groups[k];
+      list.forEach(function (e, idx) {
+        map[e.edge_id || ("idx" + idx + k)] = { idx: idx, total: list.length };
+      });
+    });
+    return map;
+  }
+
+  function curvePath(x1, y1, x2, y2, idx, total, bend) {
+    var midx = (x1 + x2) / 2;
+    var midy = (y1 + y2) / 2;
+    var dx = x2 - x1, dy = y2 - y1;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var ox = (-dy / len) * ((idx - (total - 1) / 2) * 14);
+    var oy = (dx / len) * ((idx - (total - 1) / 2) * 14);
+    var cx = midx + ox * 0.25;
+    var cy = midy - (bend || 48) + oy * 0.4;
+    return "M " + x1 + " " + y1 + " Q " + cx + " " + cy + " " + x2 + " " + y2;
+  }
+
+  function drawGraph(svg, graph, compute) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var L = layout(graph);
+    if (!L) return;
+
+    var ns = "http://www.w3.org/2000/svg";
+    var defs = document.createElementNS(ns, "defs");
+
+    var mkArrow = function (id, color) {
+      var m = document.createElementNS(ns, "marker");
+      m.setAttribute("id", id);
+      m.setAttribute("markerWidth", "10");
+      m.setAttribute("markerHeight", "10");
+      m.setAttribute("refX", "9");
+      m.setAttribute("refY", "3");
+      m.setAttribute("orient", "auto");
+      var pol = document.createElementNS(ns, "polygon");
+      pol.setAttribute("points", "0 0, 10 3, 0 6");
+      pol.setAttribute("fill", color);
+      m.appendChild(pol);
+      return m;
+    };
+    defs.appendChild(mkArrow("arrow-cash", "#0f766e"));
+    defs.appendChild(mkArrow("arrow-contrib", "#6d28d9"));
+    defs.appendChild(mkArrow("arrow-settle", "#e11d48"));
+    svg.appendChild(defs);
+
+    var gEdges = document.createElementNS(ns, "g");
+    gEdges.setAttribute("class", "edges");
+    svg.appendChild(gEdges);
+
+    var offs = groupOffsets(graph.edges || [], L.positions);
+    var edgeMeta = function (e) {
+      var k = e.edge_id;
+      if (offs[k]) return offs[k];
+      var fake = e.kind === "cash_flow"
+        ? e.from_id + "->" + e.to_id + ":cash"
+        : e.person_id + "->" + e.good_id + ":c";
+      var list = (graph.edges || []).filter(function (x) {
+        if (e.kind === "cash_flow" && x.kind === "cash_flow") return x.from_id === e.from_id && x.to_id === e.to_id;
+        if (e.kind === "contribution" && x.kind === "contribution") return x.person_id === e.person_id && x.good_id === e.good_id;
+        return false;
+      });
+      var idx = list.indexOf(e);
+      return { idx: idx < 0 ? 0 : idx, total: Math.max(1, list.length) };
+    };
+
+    (graph.edges || []).forEach(function (e) {
+      var ep = edgeEndpoints(e, L.positions);
+      if (!ep) return;
+      var meta = edgeMeta(e);
+      var path = document.createElementNS(ns, "path");
+      var d = curvePath(ep.x1, ep.y1, ep.x2, ep.y2, meta.idx, meta.total, e.kind === "contribution" ? 38 : 52);
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "none");
+      if (e.kind === "cash_flow") {
+        path.setAttribute("stroke", "#0f766e");
+        path.setAttribute("stroke-width", "2.5");
+        path.setAttribute("marker-end", "url(#arrow-cash)");
+      } else {
+        path.setAttribute("stroke", "#6d28d9");
+        path.setAttribute("stroke-width", "2");
+        path.setAttribute("stroke-dasharray", "6 5");
+        path.setAttribute("marker-end", "url(#arrow-contrib)");
+      }
+      gEdges.appendChild(path);
+
+      var midT = 0.5;
+      var mx = (1 - midT) * (1 - midT) * ep.x1 + 2 * (1 - midT) * midT * (((ep.x1 + ep.x2) / 2) + (e.kind === "contribution" ? -6 : -4)) + midT * midT * ep.x2;
+      var my = (1 - midT) * (1 - midT) * ep.y1 + 2 * (1 - midT) * midT * ((ep.y1 + ep.y2) / 2 - (e.kind === "contribution" ? 38 : 52)) + midT * midT * ep.y2;
+
+      var text = document.createElementNS(ns, "text");
+      text.setAttribute("x", mx);
+      text.setAttribute("y", my);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-size", "11");
+      text.setAttribute("font-weight", "600");
+      text.setAttribute("fill", e.kind === "cash_flow" ? "#0f766e" : "#5b21b6");
+      var label = e.kind === "cash_flow"
+        ? eur(e.amount_cents)
+        : ("\u00d7" + e.value);
+      text.textContent = label;
+      gEdges.appendChild(text);
+    });
+
+    if (compute && compute.success && compute.suggested_transfers && compute.suggested_transfers.length) {
+      var settleG = document.createElementNS(ns, "g");
+      settleG.setAttribute("class", "settlement");
+      (compute.suggested_transfers || []).forEach(function (t, si) {
+        var a = L.positions[t.from_person_id];
+        var b = L.positions[t.to_person_id];
+        if (!a || !b) return;
+        var lift = 55 + si * 10;
+        var d = curvePath(a.x, a.y, b.x, b.y, si, compute.suggested_transfers.length, -lift);
+        var p = document.createElementNS(ns, "path");
+        p.setAttribute("d", d);
+        p.setAttribute("fill", "none");
+        p.setAttribute("stroke", "#e11d48");
+        p.setAttribute("stroke-width", "2");
+        p.setAttribute("stroke-dasharray", "8 6");
+        p.setAttribute("marker-end", "url(#arrow-settle)");
+        settleG.appendChild(p);
+        var mx = (a.x + b.x) / 2;
+        var my = (a.y + b.y) / 2 - lift * 0.6;
+        var te = document.createElementNS(ns, "text");
+        te.setAttribute("x", mx);
+        te.setAttribute("y", my);
+        te.setAttribute("text-anchor", "middle");
+        te.setAttribute("font-size", "11");
+        te.setAttribute("font-weight", "700");
+        te.setAttribute("fill", "#be123c");
+        te.textContent = eur(t.amount_cents);
+        settleG.appendChild(te);
+      });
+      gEdges.appendChild(settleG);
+    }
+
+    var gNodes = document.createElementNS(ns, "g");
+    Object.keys(L.positions).forEach(function (id) {
+      var P = L.positions[id];
+      var n = P.node;
+      var circ = document.createElementNS(ns, "circle");
+      circ.setAttribute("cx", P.x);
+      circ.setAttribute("cy", P.y);
+      circ.setAttribute("r", P.r);
+      if (P.kind === "person") {
+        circ.setAttribute("fill", "#bfdbfe");
+        circ.setAttribute("stroke", "#1d4ed8");
+        circ.setAttribute("stroke-width", "2.5");
+      } else {
+        circ.setAttribute("fill", "#fde68a");
+        circ.setAttribute("stroke", "#b45309");
+        circ.setAttribute("stroke-width", "2.5");
+      }
+      gNodes.appendChild(circ);
+
+      var title = P.kind === "person"
+        ? (n.display_name || id)
+        : (n.label || id);
+      var sub = P.kind === "good" && n.stated_total_cents != null ? eur(n.stated_total_cents) : "";
+
+      var lbl = document.createElementNS(ns, "text");
+      lbl.setAttribute("x", P.x);
+      lbl.setAttribute("y", P.y + P.r + (P.kind === "person" ? 15 : 13));
+      lbl.setAttribute("text-anchor", "middle");
+      lbl.setAttribute("font-size", P.kind === "person" ? "12" : "11");
+      lbl.setAttribute("font-weight", "700");
+      lbl.textContent = title;
+      gNodes.appendChild(lbl);
+
+      if (sub) {
+        var sl = document.createElementNS(ns, "text");
+        sl.setAttribute("x", P.x);
+        sl.setAttribute("y", P.y + P.r + 27);
+        sl.setAttribute("text-anchor", "middle");
+        sl.setAttribute("font-size", "10");
+        sl.setAttribute("fill", "#92400e");
+        sl.setAttribute("font-weight", "600");
+        sl.textContent = sub;
+        gNodes.appendChild(sl);
+      }
+    });
+    svg.appendChild(gNodes);
+  }
+
+  function renderComputeBoard(el, compute) {
+    el.innerHTML = "";
+    if (!compute || !compute.success) return;
+
+    var intro = document.createElement("p");
+    intro.className = "muted";
+    intro.textContent = "Fair share uses each good\u2019s cash-in and contribution weights (engine rounds up per person-good slice). Net = paid out \u2212 fair share.";
+    el.appendChild(intro);
+
+    var grid = document.createElement("div");
+    grid.className = "compute-grid";
+
+    (compute.per_person || []).forEach(function (row) {
+      var card = document.createElement("div");
+      card.className = "person-card";
+      var h = document.createElement("h3");
+      h.textContent = row.display_name || row.person_id;
+      card.appendChild(h);
+      var dl = document.createElement("dl");
+      [["Paid out", eur(row.paid_out_cents)], ["Fair share owed", eur(row.fair_share_owed_cents)]].forEach(function (pair) {
+        var dt = document.createElement("dt");
+        dt.textContent = pair[0];
+        var dd = document.createElement("dd");
+        dd.textContent = pair[1];
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+      var dtN = document.createElement("dt");
+      dtN.textContent = "Net (balance)";
+      var ddN = document.createElement("dd");
+      var net = row.net_cents;
+      if (net > 0) { ddN.className = "net-pos"; ddN.textContent = "+" + eur(net) + " (owed to them)"; }
+      else if (net < 0) { ddN.className = "net-neg"; ddN.textContent = eur(net) + " (they owe)"; }
+      else { ddN.className = "net-zero"; ddN.textContent = eur(0); }
+      dl.appendChild(dtN);
+      dl.appendChild(ddN);
+      card.appendChild(dl);
+      grid.appendChild(card);
+    });
+    el.appendChild(grid);
+
+    var tr = compute.suggested_transfers || [];
+    if (tr.length) {
+      var box = document.createElement("div");
+      box.className = "transfers";
+      var th = document.createElement("h3");
+      th.textContent = "Suggested transfers (pairwise settlement)";
+      box.appendChild(th);
+      var ul = document.createElement("ul");
+      tr.forEach(function (t) {
+        var li = document.createElement("li");
+        var from = t.from_person_id;
+        var to = t.to_person_id;
+        li.textContent = from + " pays " + to + " " + eur(t.amount_cents);
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      el.appendChild(box);
+    }
+  }
+
+  var graph = readJson("demo-graph-data");
+  var compute = readJson("demo-compute-data");
+  var svg = document.getElementById("graph-svg");
+  var empty = document.getElementById("graph-empty");
+
+  if (!graph || !graph.nodes || !graph.nodes.length) {
+    empty.hidden = false;
+  } else {
+    empty.hidden = true;
+    drawGraph(svg, graph, compute);
+  }
+
+  renderComputeBoard(document.getElementById("compute-board"), compute);
+})();
+  </script>
+</body>
+</html>
