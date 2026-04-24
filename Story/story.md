@@ -4,7 +4,7 @@ We, a group of people, got together to celebrate the New Year in the small count
 BEFORE:
 Friend1 paid for the hotel in location1 a month before the trip
 Friend2 paid for the car rental 2 weeks before the trip for Friends1,2,3,6
-Friend3 bought airplane tickets for the trip for friends2 and 3
+Friend3 bought airplane tickets for the trip for Friend2 and Friend3
 Friend4 rented a car for Friend4 and Friend5
 Friend6 didn't buy anything
 
@@ -19,19 +19,19 @@ Friend1 paid for a package of food
 
 Day 2
 In the morning we went cable car riding and bought passes
-Friend 2 paid for Friend2 and Friend3 and took a photo together
-Friend1 paid for friends1,4,5,6 and they didn't take any photos
+Friend2 paid for Friend2 and Friend3, and took a photo together
+Friend1 paid for Friend1,4,5,6 and they didn't take any photos
 In the evening we went to the store and bought more alcohol
 
 Day 3
-The next day friends2 and 3 went to the museum and friend3 paid for friends2,3 and they took a photo together
+The next day Friend2 and Friend3 went to the museum and Friend3 paid for Friend2 and Friend3, and they took a photo together
 Friends1,4,5,6 didn't go anywhere.
 In the evening everyone went to a restaurant and Friend6 paid for everyone, we have a photo of the shared bill.
 
 Day 4
 We decided to rent bicycles and all friends paid for themselves
 Everyone took a bunch of photos from this trip
-In the evening friend4 bought alcohol for everyone
+In the evening Friend4 bought alcohol for everyone
 Friend5 bought treats for everyone
 
 Day 5
