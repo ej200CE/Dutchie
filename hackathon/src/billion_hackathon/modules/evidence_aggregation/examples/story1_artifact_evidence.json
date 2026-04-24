@@ -1,0 +1,125 @@
+{
+  "event_id": "evt_bar_story1",
+  "items": [
+    {
+      "id": "ev-img-selfie",
+      "source_item_ids": ["img-selfie"],
+      "kind": "presence_hint",
+      "amount_cents": null,
+      "currency": "EUR",
+      "label": null,
+      "payer_person_id": null,
+      "participant_person_ids": ["alex", "bart", "charlie"],
+      "confidence": 0.9,
+      "raw_excerpt": "Three men at a bar, holding beers",
+      "extra": {
+        "image_type": "people_photo",
+        "context": {
+          "venue": "De Kroeg",
+          "venue_type": "bar",
+          "datetime_visible": "2026-03-03T21:00:00",
+          "location_hint": "Amsterdam",
+          "total_amount_cents": null,
+          "currency": null
+        },
+        "persons": [
+          {
+            "person_id": "alex",
+            "display_name": "Alex",
+            "description": "Man, 20s, dark hair, blue t-shirt, holding beer",
+            "seat_or_position": "left",
+            "confidence": 0.9
+          },
+          {
+            "person_id": "bart",
+            "display_name": "Bart",
+            "description": "Man, 20s, brown hair, white shirt, holding beer",
+            "seat_or_position": "centre",
+            "confidence": 0.9
+          },
+          {
+            "person_id": "charlie",
+            "display_name": "Charlie",
+            "description": "Man, 20s, blond hair, green hoodie, holding beer",
+            "seat_or_position": "right",
+            "confidence": 0.9
+          }
+        ],
+        "goods": []
+      }
+    },
+    {
+      "id": "ev-img-receipt-0",
+      "source_item_ids": ["img-receipt"],
+      "kind": "receipt_line",
+      "amount_cents": 999,
+      "currency": "EUR",
+      "label": "3x beer",
+      "payer_person_id": null,
+      "participant_person_ids": [],
+      "confidence": 0.92,
+      "raw_excerpt": "Receipt from De Kroeg showing 3x beer for €9.99",
+      "extra": {
+        "image_type": "receipt",
+        "context": {
+          "venue": "De Kroeg",
+          "venue_type": "bar",
+          "datetime_visible": "2026-03-03T21:30:00",
+          "location_hint": "Amsterdam",
+          "total_amount_cents": 999,
+          "currency": "EUR"
+        },
+        "persons": [],
+        "goods": [
+          {
+            "good_id": "beer_3x",
+            "label": "3x beer",
+            "category": "drink",
+            "quantity": 3,
+            "unit_price_cents": 333,
+            "total_cents": 999,
+            "description": "Three identical beers on tap",
+            "visual_cues": null
+          }
+        ],
+        "good_id": "beer_3x",
+        "notes": "single receipt line for the round"
+      }
+    },
+    {
+      "id": "ev-img-screenshot-0",
+      "source_item_ids": ["img-screenshot"],
+      "kind": "spend_hint",
+      "amount_cents": 999,
+      "currency": "EUR",
+      "label": "De Kroeg",
+      "payer_person_id": "bart",
+      "participant_person_ids": ["alex", "bart", "charlie"],
+      "confidence": 0.88,
+      "raw_excerpt": "bunq transaction: Bart paid €9.99 at De Kroeg",
+      "extra": {
+        "image_type": "transaction_screenshot",
+        "context": {
+          "venue": "De Kroeg",
+          "venue_type": "bar",
+          "datetime_visible": "2026-03-03T21:30:00",
+          "location_hint": "Amsterdam",
+          "total_amount_cents": 999,
+          "currency": "EUR"
+        },
+        "persons": [
+          {
+            "person_id": "bart",
+            "display_name": "Bart",
+            "description": "Account holder making the payment",
+            "seat_or_position": null,
+            "confidence": 0.95
+          }
+        ],
+        "goods": [],
+        "good_id": "beer_3x",
+        "notes": "Bart paid the full round"
+      }
+    }
+  ]
+}

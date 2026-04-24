@@ -39,6 +39,7 @@ REPO_ROOT = HACKATHON_DIR.parent
 load_dotenv(REPO_ROOT / ".env")
 WEB = PKG / "web"
 UPLOAD_ROOT = HACKATHON_DIR / "var" / "uploads"
+SCENARIO_CACHE_FILE = HACKATHON_DIR / "var" / "scenario_cache.json"
 STORY1_DIR = REPO_ROOT / "Story" / "1"
 
 templates = Jinja2Templates(directory=str(WEB / "templates"))
@@ -55,7 +56,22 @@ class HackathonSession:
     last_graph: dict[str, Any] | None = None
 
 
+def _load_scenario_cache() -> dict[str, Any]:
+    if SCENARIO_CACHE_FILE.exists():
+        try:
+            return json.loads(SCENARIO_CACHE_FILE.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_scenario_cache(cache: dict[str, Any]) -> None:
+    SCENARIO_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SCENARIO_CACHE_FILE.write_text(json.dumps(cache, indent=2))
+
+
 app.state.sessions: dict[str, HackathonSession] = {}
+app.state.scenario_cache: dict[str, Any] = _load_scenario_cache()
 
 
 def _get_session(request: Request, session_id: str | None) -> tuple[str, HackathonSession]:
@@ -110,7 +126,7 @@ async def run_pipeline(request: Request, body: PipelineBody) -> JSONResponse:
     if body.note:
         DataCollectionService(UPLOAD_ROOT).add_note(s.bundle, body.note)
 
-    ingest = DataIngestionService().ingest(s.bundle)
+    ingest = await DataIngestionService().aingest(s.bundle)
     blueprint = EvidenceAggregationService().aggregate(ingest)
     graph, issues = GraphBuilderService().build(blueprint)
     result = compute({"nodes": graph["nodes"], "edges": graph["edges"]})
@@ -189,6 +205,41 @@ async def collect_scenario1(request: Request) -> JSONResponse:
     )
 
 
+@app.post("/api/scenario1/ingest")
+async def scenario1_ingest(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    svc = DataCollectionService(UPLOAD_ROOT)
+    s.bundle.items.clear()
+    for fname, mime in [
+        ("selfe_of_three1_with_exif.jpg", "image/jpeg"),
+        ("receipt1_with_exif.jpg", "image/jpeg"),
+        ("screenshot1.jpg", "image/jpeg"),
+    ]:
+        path = STORY1_DIR / fname
+        if path.exists():
+            svc.add_upload(s.bundle, fname, path.read_bytes(), mime)
+    evidence = await DataIngestionService().aingest(s.bundle)
+    s.last_evidence = evidence
+    app.state.scenario_cache["1_evidence"] = evidence.model_dump(mode="json")
+    _save_scenario_cache(app.state.scenario_cache)
+    return _set_cookie(
+        JSONResponse({
+            "session_id": sid,
+            "bundle": s.bundle.model_dump(mode="json"),
+            "evidence": app.state.scenario_cache["1_evidence"],
+        }),
+        sid,
+    )
+
+
+@app.get("/api/scenario1/evidence")
+async def scenario1_evidence(request: Request) -> JSONResponse:
+    cached = app.state.scenario_cache.get("1_evidence")
+    if cached is None:
+        return JSONResponse({"error": "No scenario 1 evidence cached — run it first"}, status_code=404)
+    return JSONResponse(cached)
+
+
 @app.post("/api/collect/clear")
 async def collect_clear(request: Request) -> JSONResponse:
     sid, s = _get_session(request, None)
@@ -212,7 +263,7 @@ async def pipeline_from_example(request: Request) -> JSONResponse:
     s = HackathonSession(bundle)
     app.state.sessions[sid] = s
 
-    ingest = DataIngestionService().ingest(s.bundle)
+    ingest = await DataIngestionService().aingest(s.bundle)
     blueprint = EvidenceAggregationService().aggregate(ingest)
     graph, issues = GraphBuilderService().build(blueprint)
     result = compute({"nodes": graph["nodes"], "edges": graph["edges"]})
@@ -241,7 +292,7 @@ class DevIngestBody(BaseModel):
 async def dev_ingest(request: Request, body: DevIngestBody) -> JSONResponse:
     sid, s = _get_session(request, None)
     bundle = body.collected if body.collected is not None else s.bundle
-    ingest = DataIngestionService().ingest(bundle)
+    ingest = await DataIngestionService().aingest(bundle)
     s.last_evidence = ingest
     return _set_cookie(
         JSONResponse({"session_id": sid, "evidence": ingest.model_dump(mode="json")}),

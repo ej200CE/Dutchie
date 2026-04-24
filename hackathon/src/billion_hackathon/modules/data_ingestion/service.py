@@ -5,12 +5,14 @@ Routing:
   image → ImageIngestor  (LLM vision or EXIF stub)
   file  → DocumentIngestor (LLM text or regex stub)
 
-All three paths produce EvidenceItems; the LLM client is created once and
-shared across both file-type ingestors.
+The LLM client is created once and shared across ingestors.
+`aingest` fires all LLM calls concurrently via asyncio; `ingest` is a
+sequential sync wrapper kept for tests and scripts.
 """
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 from billion_hackathon.contracts.collected import CollectedBundle, CollectedItem
@@ -63,13 +65,25 @@ class DataIngestionService:
         self._image = ImageIngestor(client)
         self._document = DocumentIngestor(client)
 
+    def _process_item(self, item: CollectedItem) -> list[EvidenceItem]:
+        if item.kind == "note" and item.text:
+            return [_ingest_note(item)]
+        if item.kind == "image":
+            return self._image.ingest(item)
+        if item.kind == "file":
+            return self._document.ingest(item)
+        return []
+
+    async def aingest(self, bundle: CollectedBundle) -> EvidenceBundle:
+        """Ingest all items concurrently — each blocking LLM call runs in a thread."""
+        tasks = [asyncio.to_thread(self._process_item, item) for item in bundle.items]
+        results = await asyncio.gather(*tasks)
+        out = [ev for items in results for ev in items]
+        return EvidenceBundle(event_id=bundle.event_id, items=out)
+
     def ingest(self, bundle: CollectedBundle) -> EvidenceBundle:
+        """Sequential sync path — used by tests and scripts."""
         out: list[EvidenceItem] = []
         for item in bundle.items:
-            if item.kind == "note" and item.text:
-                out.append(_ingest_note(item))
-            elif item.kind == "image":
-                out.extend(self._image.ingest(item))
-            elif item.kind == "file":
-                out.extend(self._document.ingest(item))
+            out.extend(self._process_item(item))
         return EvidenceBundle(event_id=bundle.event_id, items=out)

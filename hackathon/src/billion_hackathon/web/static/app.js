@@ -240,6 +240,14 @@ $("btn-ingest-run").onclick = async () => {
   show($("out-ingest"), j);
 };
 
+$("btn-ingest-load-scenario1").onclick = async () => {
+  const r = await fetch("/api/scenario1/evidence", { credentials: "same-origin" });
+  const j = await r.json();
+  if (j.error) { show($("out-ingest"), j); return; }
+  $("tx-aggregate-in").value = JSON.stringify(j, null, 2);
+  show($("out-ingest"), j);
+};
+
 /* --- Aggregation --- */
 $("btn-agg-load-session").onclick = async () => {
   const j = await fetchSession();

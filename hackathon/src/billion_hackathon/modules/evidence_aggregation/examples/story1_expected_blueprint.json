@@ -1,28 +1,28 @@
 {
-  "event_id": "evt_weekend_01",
+  "event_id": "evt_bar_story1",
   "operations": [
     {
       "op": "add_node",
-      "node": { "id": "alice", "kind": "person", "display_name": "alice" },
+      "node": { "id": "alex",    "kind": "person", "display_name": "Alex"    },
       "edge": null
     },
     {
       "op": "add_node",
-      "node": { "id": "bob", "kind": "person", "display_name": "bob" },
+      "node": { "id": "bart",    "kind": "person", "display_name": "Bart"    },
       "edge": null
     },
     {
       "op": "add_node",
-      "node": { "id": "carol", "kind": "person", "display_name": "carol" },
+      "node": { "id": "charlie", "kind": "person", "display_name": "Charlie" },
       "edge": null
     },
     {
       "op": "add_node",
       "node": {
-        "id": "good-groceries",
+        "id": "beer_3x",
         "kind": "good",
-        "display_name": "groceries",
-        "stated_total_cents": 12000
+        "display_name": "3x beer",
+        "stated_total_cents": 999
       },
       "edge": null
     },
@@ -31,11 +31,11 @@
       "node": null,
       "edge": {
         "kind": "cash_flow",
-        "edge_id": "cf-good-groceries-alice",
-        "from_id": "alice",
+        "edge_id": "cf-beer_3x-bart",
+        "from_id": "bart",
         "target": "good",
-        "to_id": "good-groceries",
-        "amount_cents": 12000
+        "to_id": "beer_3x",
+        "amount_cents": 999
       }
     },
     {
@@ -43,9 +43,9 @@
       "node": null,
       "edge": {
         "kind": "contribution",
-        "edge_id": "ct-good-groceries-alice",
-        "person_id": "alice",
-        "good_id": "good-groceries",
+        "edge_id": "ct-beer_3x-alex",
+        "person_id": "alex",
+        "good_id": "beer_3x",
         "value": 1.0
       }
     },
@@ -54,9 +54,9 @@
       "node": null,
       "edge": {
         "kind": "contribution",
-        "edge_id": "ct-good-groceries-bob",
-        "person_id": "bob",
-        "good_id": "good-groceries",
+        "edge_id": "ct-beer_3x-bart",
+        "person_id": "bart",
+        "good_id": "beer_3x",
         "value": 1.0
       }
     },
@@ -65,9 +65,9 @@
       "node": null,
       "edge": {
         "kind": "contribution",
-        "edge_id": "ct-good-groceries-carol",
-        "person_id": "carol",
-        "good_id": "good-groceries",
+        "edge_id": "ct-beer_3x-charlie",
+        "person_id": "charlie",
+        "good_id": "beer_3x",
         "value": 1.0
       }
     }

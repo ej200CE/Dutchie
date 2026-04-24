@@ -30,6 +30,7 @@ Fields are `None` when the image has no EXIF, when Pillow is not installed, or f
 | `POST` | `/api/collect/upload` | Upload one or more files (`files` form field, `multipart/form-data`) |
 | `GET`  | `/api/collect/file/{item_id}` | Serve an uploaded file (for image thumbnails in the UI) |
 | `POST` | `/api/collect/clear` | Clear all items from the session bundle |
+| `POST` | `/api/collect/scenario1` | Load Story/1 fixture files into the session bundle (dev helper — no LLM) |
 
 ## Contract
 

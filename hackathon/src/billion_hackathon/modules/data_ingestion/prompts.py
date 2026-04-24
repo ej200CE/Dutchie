@@ -138,25 +138,38 @@ No prose, no markdown fences, no explanation outside the JSON object.
 RULES
 ────────────────────────────────────────────
 Persons:
-- One entry in persons for every distinct person visible, however briefly.
+- One entry in persons for every distinct person visible OR named in text on the image.
+- If a payer/cardholder name is printed on a receipt or transaction screen
+  (e.g. "Paid by E. Evans", a cardholder line, an account-holder name), add that
+  person to persons[] with their name as display_name and a slug as person_id, even
+  if they are not physically visible. Then use that person_id as payer_person_id.
 - person_id must be stable and unique within this response.
 - seat_or_position is critical for table photos: it lets us match a person to a dish.
 
 Goods:
 - One entry in goods for every distinct item, service, or cost visible.
 - For receipts: every line item → one good + one receipt_line item referencing it.
-- For table photos: every distinct dish or drink visible → one good with visual_cues.
+- For table photos: if multiple people hold IDENTICAL items (same drink, same dish),
+  create ONE good with quantity = N rather than N separate goods.
 - good_id must be a short, descriptive, lowercase slug (no spaces).
 
 Items:
 - good_id and payer_person_id / participant_person_ids MUST reference ids from the
   goods and persons arrays above.
-- For a receipt: emit receipt_line items (one per line), plus a spend_hint for the total
-  with the payer if identifiable.
+- For a receipt: emit receipt_line items (one per line), plus a spend_hint for the
+  total. If a payer name is printed on the receipt, use it as payer_person_id.
 - For a people photo: emit a presence_hint listing everyone visible.
   If some people are eating/holding specific goods, add their good_id.
-- For a transaction screenshot: one spend_hint with total, payer, and good_id if the
-  merchant maps to a good.
+- For a transaction screenshot — READ CAREFULLY:
+  * context.venue = the PAYEE (who received the money: bar name, restaurant, shop),
+    NOT the name of the payment app (bunq, iDEAL, Monzo, Revolut, etc.).
+  * If the only merchant name visible is the payment app's own brand (e.g. "bunq BV"),
+    check the line items. If the goods described are food, drinks, or other shared
+    expenses, this is a PAYMENT FOR a group expense — not a subscription.
+    Set context.venue to the most specific merchant/location visible.
+  * The account-holder name or "From:" field is the payer — add to persons[] and
+    set as payer_person_id.
+  * Emit one spend_hint with total, payer, and good_id referencing the goods array.
 - Monetary amounts in the currency's smallest unit. €12.50 → 1250.
 - If the image contains nothing useful, return empty arrays for persons, goods, and items.
 """

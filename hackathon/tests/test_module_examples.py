@@ -49,6 +49,16 @@ class ModuleExampleTests(unittest.TestCase):
         )
         self.assertEqual(got.model_dump(), expected.model_dump())
 
+    def test_evidence_aggregation_story1_rules(self):
+        """Rule-based aggregation of Story/1 rich evidence (selfie + receipt + transaction)."""
+        from billion_hackathon.modules.evidence_aggregation.service import _aggregate_rules
+        ev = EvidenceBundle.model_validate(_read("evidence_aggregation", "story1_artifact_evidence.json"))
+        got = _aggregate_rules(ev)
+        expected = GraphBlueprint.model_validate(
+            _read("evidence_aggregation", "story1_expected_blueprint.json")
+        )
+        self.assertEqual(got.model_dump(), expected.model_dump())
+
     def test_graph_builder_snapshot(self):
         bp = GraphBlueprint.model_validate(_read("graph_builder", "artifact_blueprint.json"))
         snap, issues = GraphBuilderService().build(bp)

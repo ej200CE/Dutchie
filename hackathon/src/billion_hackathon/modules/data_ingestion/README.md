@@ -11,7 +11,9 @@ Each `CollectedItem` is dispatched to the right ingestor based on its `kind`:
 | `image` | `ImageIngestor` | Vision LLM → JSON → EvidenceItems. EXIF-based stub when LLM is not configured. |
 | `file` | `DocumentIngestor` | Text LLM → JSON → EvidenceItems. Regex stub for `EXPENSE:` lines when LLM is not configured. Binary files (PDF, DOCX) emit a `confidence=0` placeholder. |
 
-The LLM client is created once in `DataIngestionService.__init__` and shared.
+The LLM client is created once in `DataIngestionService.__init__` and shared across ingestors.
+LLM calls for all items are dispatched concurrently via `aingest` (the web-server path).
+A sequential `ingest` method is kept for tests and scripts.
 
 ## Main idea
 
@@ -138,7 +140,7 @@ Prompts live in [`prompts.py`](prompts.py).
 
 | File | Purpose |
 |------|---------|
-| `service.py` | Entry point — creates ingestors, dispatches by `kind` |
+| `service.py` | Entry point — `aingest` (concurrent, FastAPI path) / `ingest` (sequential, tests) |
 | `image_ingestor.py` | Image → vision LLM → EvidenceItems |
 | `document_ingestor.py` | Text file → text LLM → EvidenceItems |
 | `prompts.py` | All LLM prompt templates and field-mapping notes |
