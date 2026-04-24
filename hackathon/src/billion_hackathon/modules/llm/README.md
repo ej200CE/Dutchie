@@ -2,31 +2,73 @@
 
 ## Responsibility
 
-**One place** for all **large-model requests**: chat/completions, shared **timeouts**, **API keys**, logging, and future **retry** logic. **Ingestion** and **evidence_aggregation** should call into here instead of embedding HTTP clients.
+**One place** for all large-model requests: chat completions (text + images), API keys, timeouts, and future retry logic. Ingestion and aggregation modules call into here; they do not embed HTTP clients.
 
-## Main idea
+## Providers
 
-The architecture keeps **LLM upstream** of the **Computational Engine** ([`event-domain-and-graph.md`](../../../../../docs/architecture/event-domain-and-graph.md) §3, §6). This package does **not** build graphs or balances — it only returns **text** (or later: JSON you parse into **`EvidenceBundle`** / **`GraphBlueprint`** in the caller).
+| `BILLION_LLM_PROVIDER` | Client class | Notes |
+|------------------------|-------------|-------|
+| `stub` (default) | `StubLLMClient` | Deterministic echo. No network. Tests pass without a key. |
+| `openai` | `OpenAICompatibleClient` | Any OpenAI-compatible endpoint: official API, OpenRouter, Together AI, Ollama, … |
+| `anthropic` | `AnthropicClient` | Anthropic Messages API (native format). |
 
-## Architecture links
+## Quick start
 
-- **Context Engine** — reasoning / initial estimates — [`event-domain-and-graph.md`](../../../../../docs/architecture/event-domain-and-graph.md) §3.  
-- **Provenance** — keep `source_item_ids` on evidence produced with LLM help.
+Copy `.env.example` → `.env` and set:
 
-## Configuration
+```
+BILLION_LLM_PROVIDER=anthropic          # or openai
+BILLION_LLM_API_KEY=sk-ant-…
+BILLION_LLM_MODEL=claude-3-5-sonnet-20241022
+```
 
-| Env var | Purpose |
-|---------|---------|
-| `BILLION_LLM_BASE_URL` | OpenAI-compatible API base (optional) |
-| `BILLION_LLM_API_KEY` | Secret (optional) |
+Restart the server — `get_llm_client()` picks the right client automatically.
 
-When both are set, extend [`client.py`](client.py) to use **`httpx`**; until then **`get_llm_client()`** returns **`StubLLMClient`**.
+## Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BILLION_LLM_PROVIDER` | `stub` | Which provider to use |
+| `BILLION_LLM_API_KEY` | *(empty)* | Auth token for the provider |
+| `BILLION_LLM_MODEL` | `gpt-4o` / `claude-3-5-sonnet-20241022` | Model name |
+| `BILLION_LLM_BASE_URL` | `https://api.openai.com/v1` | Override for openai-compatible endpoints only |
+
+## Multimodal support
+
+`ChatMessage.content` accepts either a plain `str` **or** a `list[ContentPart]`:
+
+```python
+from billion_hackathon.modules.llm.client import (
+    ChatMessage, ImagePart, TextPart, get_llm_client,
+)
+
+client = get_llm_client()
+response = client.complete([
+    ChatMessage(role="system", content="Analyze this receipt."),
+    ChatMessage(
+        role="user",
+        content=[
+            TextPart(text="What is the total?"),
+            ImagePart(data=base64_jpeg, media_type="image/jpeg"),
+        ],
+    ),
+])
+```
+
+Both `OpenAICompatibleClient` and `AnthropicClient` translate `ImagePart` to the correct provider format. `StubLLMClient` ignores image parts and echoes the text.
 
 ## Contract
 
-- Input: `list[ChatMessage]` (`role`, `content`)  
-- Output: **`LLMResponse`** (`text`, `model`, `raw`)
+- Input: `list[ChatMessage]`
+- Output: `LLMResponse(text, model, raw)`
+- `LLMResponse.text` is always a plain string; callers parse JSON from it when needed.
+
+## Architecture links
+
+- **Context Engine** reasoning — [`event-domain-and-graph.md`](../../../../../docs/architecture/event-domain-and-graph.md) §3.
+- LLM stays **upstream** of the Computational Engine; graph and balances are always deterministic.
+- Provenance: callers set `source_item_ids` on EvidenceItems so every LLM inference is traceable.
 
 ## Examples
 
-[`examples/`](examples/) — sample request/response JSON for docs and tests.
+[`examples/`](examples/) — sample request + expected stub response used in contract tests.

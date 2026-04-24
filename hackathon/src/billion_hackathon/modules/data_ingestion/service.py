@@ -1,12 +1,23 @@
-"""Turn CollectedBundle into EvidenceBundle. Replace stub with LLM client later."""
+"""Turn CollectedBundle into EvidenceBundle.
+
+Routing:
+  note  → rule-based parser (fast, reliable, no LLM needed)
+  image → ImageIngestor  (LLM vision or EXIF stub)
+  file  → DocumentIngestor (LLM text or regex stub)
+
+All three paths produce EvidenceItems; the LLM client is created once and
+shared across both file-type ingestors.
+"""
 
 from __future__ import annotations
 
 import re
 
-from billion_hackathon.contracts.collected import CollectedBundle
+from billion_hackathon.contracts.collected import CollectedBundle, CollectedItem
 from billion_hackathon.contracts.evidence import EvidenceBundle, EvidenceItem
-
+from billion_hackathon.modules.data_ingestion.document_ingestor import DocumentIngestor
+from billion_hackathon.modules.data_ingestion.image_ingestor import ImageIngestor
+from billion_hackathon.modules.llm.client import get_llm_client
 
 _NOTE_EXPENSE = re.compile(
     r"^EXPENSE:\s*(?P<cents>\d+)\s*cents\s+for\s+(?P<label>[\w\s-]+?)"
@@ -16,52 +27,49 @@ _NOTE_EXPENSE = re.compile(
 )
 
 
+def _ingest_note(item: CollectedItem) -> EvidenceItem:
+    m = _NOTE_EXPENSE.match((item.text or "").strip())
+    if m:
+        parts_raw = m.group("parts") or ""
+        participants = [p.strip() for p in parts_raw.split(",") if p.strip()]
+        payer = m.group("payer")
+        if payer and payer not in participants:
+            participants.append(payer)
+        return EvidenceItem(
+            id=f"ev-{item.id}",
+            source_item_ids=[item.id],
+            kind="spend_hint",
+            amount_cents=int(m.group("cents")),
+            label=m.group("label").strip(),
+            payer_person_id=payer,
+            participant_person_ids=participants or [],
+            confidence=0.85,
+            raw_excerpt=item.text[:200],
+        )
+    return EvidenceItem(
+        id=f"ev-{item.id}",
+        source_item_ids=[item.id],
+        kind="free_text",
+        confidence=0.2,
+        raw_excerpt=(item.text or "")[:500],
+    )
+
+
 class DataIngestionService:
-    """Deterministic stub: parses structured lines from notes; images become low-confidence hints."""
+    """Routes each CollectedItem to the right ingestor."""
+
+    def __init__(self) -> None:
+        client = get_llm_client()
+        self._image = ImageIngestor(client)
+        self._document = DocumentIngestor(client)
 
     def ingest(self, bundle: CollectedBundle) -> EvidenceBundle:
         out: list[EvidenceItem] = []
         for item in bundle.items:
             if item.kind == "note" and item.text:
-                m = _NOTE_EXPENSE.match(item.text.strip())
-                if m:
-                    parts_raw = m.group("parts") or ""
-                    participants = [p.strip() for p in parts_raw.split(",") if p.strip()]
-                    payer = m.group("payer")
-                    if payer and payer not in participants:
-                        participants.append(payer)
-                    out.append(
-                        EvidenceItem(
-                            id=f"ev-{item.id}",
-                            source_item_ids=[item.id],
-                            kind="spend_hint",
-                            amount_cents=int(m.group("cents")),
-                            label=m.group("label").strip(),
-                            payer_person_id=payer,
-                            participant_person_ids=participants or [],
-                            confidence=0.85,
-                            raw_excerpt=item.text[:200],
-                        )
-                    )
-                else:
-                    out.append(
-                        EvidenceItem(
-                            id=f"ev-{item.id}",
-                            source_item_ids=[item.id],
-                            kind="free_text",
-                            confidence=0.2,
-                            raw_excerpt=(item.text or "")[:500],
-                        )
-                    )
-            elif item.kind in ("image", "file"):
-                out.append(
-                    EvidenceItem(
-                        id=f"ev-{item.id}",
-                        source_item_ids=[item.id],
-                        kind="receipt_line",
-                        confidence=0.15,
-                        raw_excerpt=f"uploaded:{item.stored_path}",
-                        extra={"mime_type": item.mime_type},
-                    )
-                )
+                out.append(_ingest_note(item))
+            elif item.kind == "image":
+                out.extend(self._image.ingest(item))
+            elif item.kind == "file":
+                out.extend(self._document.ingest(item))
         return EvidenceBundle(event_id=bundle.event_id, items=out)
