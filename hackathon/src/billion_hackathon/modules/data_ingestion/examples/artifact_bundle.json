@@ -1,0 +1,10 @@
+{
+  "event_id": "evt_weekend_01",
+  "items": [
+    {
+      "id": "note-seed",
+      "kind": "note",
+      "text": "EXPENSE: 12000 cents for groceries payer=alice participants=alice,bob,carol"
+    }
+  ]
+}

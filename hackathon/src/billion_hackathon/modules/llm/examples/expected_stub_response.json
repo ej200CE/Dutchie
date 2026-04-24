@@ -1,0 +1,5 @@
+{
+  "text": "[stub-echo] Alice paid €120 for groceries; Bob and Carol split.",
+  "model": "stub",
+  "raw": { "messages_n": 2, "max_tokens": 1024 }
+}

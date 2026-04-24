@@ -1,0 +1,139 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.45;
+  color: #1a1a1a;
+  background: #e8e4dc;
+}
+
+.wrap {
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.hdr .lede {
+  color: #333;
+  margin: 0.25rem 0;
+}
+
+.meta {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0.5rem 0 1rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.35rem;
+  background: #d8d2c8;
+  border-radius: 8px;
+}
+
+.tab {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: #f0ece4;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: #fff;
+}
+
+.tab.active {
+  background: #1a472a;
+  color: #fff;
+  border-color: #1a472a;
+}
+
+.tab-panel {
+  display: none;
+  padding: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.tab-panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.hint {
+  font-size: 0.88rem;
+  color: #444;
+  margin: 0 0 0.75rem;
+}
+
+.lbl {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.json {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font: 0.8rem/1.35 ui-monospace, monospace;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+button,
+input[type="submit"] {
+  font: inherit;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #444;
+}
+
+.out {
+  overflow: auto;
+  max-height: 22rem;
+  font-size: 0.78rem;
+  background: #f4f2ec;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+code {
+  font-size: 0.88em;
+  background: #eee;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}

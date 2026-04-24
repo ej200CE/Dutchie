@@ -1,0 +1,43 @@
+{
+  "nodes": [
+    { "id": "alice", "kind": "person", "display_name": "alice" },
+    { "id": "bob", "kind": "person", "display_name": "bob" },
+    { "id": "carol", "kind": "person", "display_name": "carol" },
+    {
+      "id": "good-groceries",
+      "kind": "good",
+      "display_name": "groceries"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "cash_flow",
+      "edge_id": "cf-good-groceries-alice",
+      "from_id": "alice",
+      "target": "good",
+      "to_id": "good-groceries",
+      "amount_cents": 12000
+    },
+    {
+      "kind": "contribution",
+      "edge_id": "ct-good-groceries-alice",
+      "person_id": "alice",
+      "good_id": "good-groceries",
+      "value": 1.0
+    },
+    {
+      "kind": "contribution",
+      "edge_id": "ct-good-groceries-bob",
+      "person_id": "bob",
+      "good_id": "good-groceries",
+      "value": 1.0
+    },
+    {
+      "kind": "contribution",
+      "edge_id": "ct-good-groceries-carol",
+      "person_id": "carol",
+      "good_id": "good-groceries",
+      "value": 1.0
+    }
+  ]
+}

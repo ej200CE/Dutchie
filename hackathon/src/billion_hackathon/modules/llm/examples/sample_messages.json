@@ -1,0 +1,6 @@
+{
+  "messages": [
+    { "role": "system", "content": "You extract expense hints as JSON." },
+    { "role": "user", "content": "Alice paid €120 for groceries; Bob and Carol split." }
+  ]
+}

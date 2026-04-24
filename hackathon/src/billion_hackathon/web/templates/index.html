@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hdr">
+      <h1>{{ title }}</h1>
+      <p class="lede">One tab per module — work independently; session cookie ties steps together.</p>
+      <p class="meta">Docs: <code>src/README.md</code> · each module has <code>README.md</code></p>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Modules">
+      <button type="button" class="tab active" data-tab="collection" role="tab" aria-selected="true">1 · Collection</button>
+      <button type="button" class="tab" data-tab="ingest" role="tab" aria-selected="false">2 · Ingestion</button>
+      <button type="button" class="tab" data-tab="aggregate" role="tab" aria-selected="false">3 · Aggregation</button>
+      <button type="button" class="tab" data-tab="graph" role="tab" aria-selected="false">4 · Graph</button>
+      <button type="button" class="tab" data-tab="compute" role="tab" aria-selected="false">5 · Compute</button>
+      <button type="button" class="tab" data-tab="llm" role="tab" aria-selected="false">6 · LLM</button>
+      <button type="button" class="tab" data-tab="pipeline" role="tab" aria-selected="false">Full pipeline</button>
+    </nav>
+
+    <!-- 1 Collection -->
+    <section id="panel-collection" class="tab-panel active" role="tabpanel">
+      <h2>data_collection</h2>
+      <p class="hint">Uploads + notes → <code>CollectedBundle</code>. Refresh loads server session.</p>
+      <p>
+        <button type="button" id="btn-session-refresh">Refresh session JSON</button>
+        <button type="button" id="btn-load-weekend-coll">Load weekend example into session</button>
+      </p>
+      <label class="lbl">Session <code>collected</code></label>
+      <textarea id="tx-collection" class="json" rows="12" spellcheck="false"></textarea>
+      <div class="row">
+        <form id="form-note" class="inline">
+          <input type="text" name="text" placeholder="Note text (e.g. EXPENSE: …)" size="48" />
+          <button type="submit">Add note</button>
+        </form>
+        <form id="form-upload" class="inline">
+          <input type="file" name="file" />
+          <button type="submit">Upload</button>
+        </form>
+      </div>
+      <label class="lbl">Last response</label>
+      <pre id="out-collection" class="out">…</pre>
+    </section>
+
+    <!-- 2 Ingestion -->
+    <section id="panel-ingest" class="tab-panel" role="tabpanel" hidden>
+      <h2>data_ingestion</h2>
+      <p class="hint">Optional body: <code>CollectedBundle</code>. If empty, server uses session bundle.</p>
+      <p>
+        <button type="button" id="btn-ingest-load-session">Use session <code>collected</code> as input</button>
+        <button type="button" id="btn-ingest-run">Run ingest</button>
+      </p>
+      <label class="lbl">Input JSON (<code>{"collected": { ... } }</code> or leave empty for session)</label>
+      <textarea id="tx-ingest-in" class="json" rows="8" spellcheck="false" placeholder='{ "collected": null }'></textarea>
+      <label class="lbl">Output</label>
+      <pre id="out-ingest" class="out">…</pre>
+    </section>
+
+    <!-- 3 Aggregation -->
+    <section id="panel-aggregate" class="tab-panel" role="tabpanel" hidden>
+      <h2>evidence_aggregation</h2>
+      <p class="hint">Body: <code>EvidenceBundle</code> or use session <code>last_evidence</code>.</p>
+      <p>
+        <button type="button" id="btn-agg-load-session">Load session <code>last_evidence</code></button>
+        <button type="button" id="btn-agg-run">Run aggregate</button>
+      </p>
+      <label class="lbl">Input <code>evidence</code> JSON</label>
+      <textarea id="tx-aggregate-in" class="json" rows="10" spellcheck="false"></textarea>
+      <label class="lbl">Output</label>
+      <pre id="out-aggregate" class="out">…</pre>
+    </section>
+
+    <!-- 4 Graph -->
+    <section id="panel-graph" class="tab-panel" role="tabpanel" hidden>
+      <h2>graph_builder</h2>
+      <p class="hint"><code>GraphBlueprint</code> → snapshot + inconsistencies.</p>
+      <p>
+        <button type="button" id="btn-graph-load-session">Load session <code>last_blueprint</code></button>
+        <button type="button" id="btn-graph-run">Build graph</button>
+      </p>
+      <label class="lbl">Input <code>blueprint</code> JSON</label>
+      <textarea id="tx-graph-in" class="json" rows="10" spellcheck="false"></textarea>
+      <label class="lbl">Output</label>
+      <pre id="out-graph" class="out">…</pre>
+    </section>
+
+    <!-- 5 Compute -->
+    <section id="panel-compute" class="tab-panel" role="tabpanel" hidden>
+      <h2>computation</h2>
+      <p class="hint">POST <code>{ "graph": { "nodes", "edges" } }</code></p>
+      <p>
+        <button type="button" id="btn-compute-load-session">Load session <code>last_graph</code> (strip schema if needed)</button>
+        <button type="button" id="btn-compute-run">Run compute</button>
+      </p>
+      <label class="lbl">Input <code>graph</code> JSON</label>
+      <textarea id="tx-compute-in" class="json" rows="12" spellcheck="false"></textarea>
+      <label class="lbl">Output</label>
+      <pre id="out-compute" class="out">…</pre>
+    </section>
+
+    <!-- 6 LLM -->
+    <section id="panel-llm" class="tab-panel" role="tabpanel" hidden>
+      <h2>llm</h2>
+      <p class="hint">Central stub/provider — wire real HTTP in <code>modules/llm/client.py</code>.</p>
+      <p>
+        <button type="button" id="btn-llm-sample">Load sample messages</button>
+        <button type="button" id="btn-llm-run">Call LLM</button>
+      </p>
+      <label class="lbl"><code>messages</code> JSON</label>
+      <textarea id="tx-llm-in" class="json" rows="10" spellcheck="false"></textarea>
+      <label class="lbl">Output</label>
+      <pre id="out-llm" class="out">…</pre>
+    </section>
+
+    <!-- Full pipeline -->
+    <section id="panel-pipeline" class="tab-panel" role="tabpanel" hidden>
+      <h2>Full pipeline</h2>
+      <p class="hint">Runs all stages; optional note appended to session bundle first.</p>
+      <textarea id="tx-pipeline-note" rows="2" class="json" placeholder="Optional note"></textarea>
+      <p>
+        <button type="button" id="btn-example">Weekend example (new session)</button>
+        <button type="button" id="btn-run">Run pipeline on current session + note</button>
+      </p>
+      <label class="lbl">Output</label>
+      <pre id="out-pipeline" class="out">…</pre>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

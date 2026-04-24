@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "errors": [],
+  "per_person": [
+    {
+      "person_id": "alice",
+      "display_name": "alice",
+      "paid_out_cents": 12000,
+      "fair_share_owed_cents": 4000,
+      "net_cents": 8000
+    },
+    {
+      "person_id": "bob",
+      "display_name": "bob",
+      "paid_out_cents": 0,
+      "fair_share_owed_cents": 4000,
+      "net_cents": -4000
+    },
+    {
+      "person_id": "carol",
+      "display_name": "carol",
+      "paid_out_cents": 0,
+      "fair_share_owed_cents": 4000,
+      "net_cents": -4000
+    }
+  ],
+  "suggested_transfers": [
+    {
+      "from_person_id": "bob",
+      "to_person_id": "alice",
+      "amount_cents": 4000
+    },
+    {
+      "from_person_id": "carol",
+      "to_person_id": "alice",
+      "amount_cents": 4000
+    }
+  ],
+  "diagnostics": []
+}

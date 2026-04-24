@@ -1,0 +1,18 @@
+{
+  "event_id": "evt_weekend_01",
+  "items": [
+    {
+      "id": "ev-note-seed",
+      "source_item_ids": ["note-seed"],
+      "kind": "spend_hint",
+      "amount_cents": 12000,
+      "currency": "EUR",
+      "label": "groceries",
+      "payer_person_id": "alice",
+      "participant_person_ids": ["alice", "bob", "carol"],
+      "confidence": 0.85,
+      "raw_excerpt": "EXPENSE: 12000 cents for groceries payer=alice participants=alice,bob,carol",
+      "extra": {}
+    }
+  ]
+}
