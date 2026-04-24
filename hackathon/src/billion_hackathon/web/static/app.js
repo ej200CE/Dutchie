@@ -282,9 +282,20 @@ GraphView.onchange(async (graph) => {
   const j = await r.json();
   GraphView.load(graph, j.inconsistencies || []);
   show($("out-graph"), graph);
+  /* if pipeline result is visible, recompute settlement too */
+  if (!$("pipeline-result").hidden) {
+    const pr = await fetch("/api/dev/compute", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ graph }),
+    });
+    const pj = await pr.json();
+    renderComputeResult(pj.compute ?? pj, null, $("pipeline-compute-result"));
+  }
 });
 
 $("btn-graph-load-session-graph").onclick = async () => {
+  GraphView.setSlot({ svgId: "graph-svg", editPanelId: "graph-edit-panel", issuesId: "graph-inconsistencies" });
   const j = await fetchSession();
   if (!j.last_graph) {
     show($("out-graph"), { error: "No last_graph in session — run Build graph first" });
@@ -295,6 +306,7 @@ $("btn-graph-load-session-graph").onclick = async () => {
 };
 
 $("btn-graph-run").onclick = async () => {
+  GraphView.setSlot({ svgId: "graph-svg", editPanelId: "graph-edit-panel", issuesId: "graph-inconsistencies" });
   const raw = $("tx-graph-in").value.trim();
   const blueprint = raw ? JSON.parse(raw) : null;
   const r = await fetch("/api/dev/graph", {
@@ -320,8 +332,8 @@ function fmtEur(cents) {
   return cents < 0 ? "-" + s : s;
 }
 
-function renderComputeResult(result, errorMsg) {
-  const el = $("compute-result");
+function renderComputeResult(result, errorMsg, target) {
+  const el = target || $("compute-result");
   if (!result || errorMsg) {
     el.innerHTML = `<p class="compute-error">${esc(errorMsg || "Unknown error")}</p>`;
     return;
@@ -400,53 +412,63 @@ $("btn-compute-run").onclick = async () => {
   show($("out-compute"), j.compute ?? j);
 };
 
-/* --- LLM --- */
-$("btn-llm-sample").onclick = () => {
-  $("tx-llm-in").value = JSON.stringify(
-    {
-      messages: [
-        { role: "system", content: "You extract expense hints as JSON." },
-        {
-          role: "user",
-          content: "Alice paid €120 for groceries; Bob and Carol split.",
-        },
-      ],
-    },
-    null,
-    2,
-  );
+/* --- Pipeline (Run tab) --- */
+$("btn-pipeline-scenario1").onclick = async () => {
+  const r = await fetch("/api/collect/scenario1", { method: "POST", credentials: "same-origin" });
+  const j = await r.json();
+  renderCollectionView(j.bundle);
+  $("pipeline-collection-view").innerHTML = document.getElementById("collection-view").innerHTML;
 };
 
-$("btn-llm-run").onclick = async () => {
-  const body = JSON.parse($("tx-llm-in").value || "{}");
-  const r = await fetch("/api/dev/llm", {
-    method: "POST",
-    credentials: "same-origin",
+$("btn-pipeline-clear").onclick = async () => {
+  const r = await fetch("/api/collect/clear", { method: "POST", credentials: "same-origin" });
+  const j = await r.json();
+  updateCollectionUI(j.bundle);
+  $("pipeline-collection-view").innerHTML = "";
+  $("pipeline-result").hidden = true;
+};
+
+$("btn-pipeline-run").onclick = async () => {
+  const btn = $("btn-pipeline-run");
+  btn.disabled = true;
+  btn.textContent = "Running…";
+  try {
+    const r = await fetch("/api/pipeline/run", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const j = await r.json();
+    const graph = j.last_graph;
+    const issues = j.inconsistencies || [];
+    const computeData = j.compute;
+
+    if (graph) {
+      GraphView.setSlot({ svgId: "pipeline-svg", editPanelId: "pipeline-edit-panel", issuesId: "pipeline-graph-issues" });
+      GraphView.load(graph, issues);
+    }
+    if (computeData) renderComputeResult(computeData, null, $("pipeline-compute-result"));
+    $("pipeline-result").hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run";
+  }
+};
+
+$("btn-pipeline-recompute").onclick = async () => {
+  const graph = GraphView.getGraph();
+  if (!graph || !graph.nodes || graph.nodes.length === 0) {
+    renderComputeResult(null, "No graph — run the pipeline first.", $("pipeline-compute-result"));
+    return;
+  }
+  const r = await fetch("/api/dev/compute", {
+    method: "POST", credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ graph }),
   });
   const j = await r.json();
-  show($("out-llm"), j);
-};
-
-/* --- Pipeline --- */
-$("btn-example").onclick = async () => {
-  const r = await fetch("/api/pipeline/from-example", {
-    method: "POST",
-    credentials: "same-origin",
-  });
-  show($("out-pipeline"), await r.json());
-};
-
-$("btn-run").onclick = async () => {
-  const note = $("tx-pipeline-note").value.trim() || null;
-  const r = await fetch("/api/pipeline/run", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ note }),
-  });
-  show($("out-pipeline"), await r.json());
+  renderComputeResult(j.compute ?? j, null, $("pipeline-compute-result"));
 };
 
 /* boot */

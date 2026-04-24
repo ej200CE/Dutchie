@@ -33,11 +33,12 @@ const GraphView = (() => {
   let _selected = null;     // { type: "node"|"edge", id: string }
   let _changeFn = null;
   let _simulation = null;
+  let _slot = { svgId: "graph-svg", editPanelId: "graph-edit-panel", issuesId: "graph-inconsistencies" };
 
   /* ── helpers ────────────────────────────────────────── */
-  const svgEl  = () => document.getElementById("graph-svg");
-  const panelEl = () => document.getElementById("graph-edit-panel");
-  const issuesEl = () => document.getElementById("graph-inconsistencies");
+  const svgEl    = () => document.getElementById(_slot.svgId);
+  const panelEl  = () => document.getElementById(_slot.editPanelId);
+  const issuesEl = () => document.getElementById(_slot.issuesId);
 
   function nodeById(id) { return _graph.nodes.find(n => n.id === id); }
   function edgeById(id) { return _graph.edges.find(e => e.edge_id === id); }
@@ -513,17 +514,99 @@ const GraphView = (() => {
 
   function onchange(fn) { _changeFn = fn; }
 
-  /* wire toolbar buttons once DOM is ready */
+  function setSlot(config) {
+    _slot = { ..._slot, ...config };
+  }
+
+  /* wire toolbar buttons for any tab that has add buttons */
   document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("btn-graph-add-person")
-      ?.addEventListener("click", addPerson);
-    document.getElementById("btn-graph-add-good")
-      ?.addEventListener("click", addGood);
-    document.getElementById("btn-graph-add-cashflow")
-      ?.addEventListener("click", () => showAddEdgeForm("cash_flow"));
-    document.getElementById("btn-graph-add-contribution")
-      ?.addEventListener("click", () => showAddEdgeForm("contribution"));
+    const actions = [
+      ["add-person",       addPerson],
+      ["add-good",         addGood],
+      ["add-cashflow",     () => showAddEdgeForm("cash_flow")],
+      ["add-contribution", () => showAddEdgeForm("contribution")],
+    ];
+    for (const prefix of ["btn-graph", "btn-pipeline"]) {
+      for (const [suffix, fn] of actions) {
+        document.getElementById(`${prefix}-${suffix}`)?.addEventListener("click", fn);
+      }
+    }
   });
 
-  return { load, getGraph, onchange };
+  /* ── read-only preview (pipeline tab) ──────────────── */
+  function renderPreview(svgId, graph, issues) {
+    const errNodes = new Set((issues || []).flatMap(i => i.node_ids || []));
+    const errEdges = new Set((issues || []).flatMap(i => i.edge_ids || []));
+    const g = JSON.parse(JSON.stringify(graph));
+    const allNodes = g.nodes || [];
+    const allEdges = g.edges || [];
+
+    const svg = d3.select(document.getElementById(svgId));
+    svg.selectAll("*").remove();
+    const W = document.getElementById(svgId).clientWidth || 500;
+    const H = document.getElementById(svgId).clientHeight || 280;
+    svg.attr("viewBox", `0 0 ${W} ${H}`);
+
+    const defs = svg.append("defs");
+    function mkM(id, color) {
+      defs.append("marker").attr("id", id)
+        .attr("viewBox","0 -5 10 10").attr("refX",10).attr("refY",0)
+        .attr("markerWidth",7).attr("markerHeight",7).attr("orient","auto")
+        .append("path").attr("d","M0,-5L10,0L0,5").attr("fill",color);
+    }
+    mkM("pv-cash",   C.cashFlow);
+    mkM("pv-contrib",C.contrib);
+    mkM("pv-error",  C.error);
+
+    const persons = allNodes.filter(n => n.kind === "person");
+    const goods   = allNodes.filter(n => n.kind === "good");
+    const pad = 50;
+    persons.forEach((n,i) => { n.x = W*0.28; n.y = pad + i*(H-2*pad)/Math.max(persons.length,1); });
+    goods  .forEach((n,i) => { n.x = W*0.72; n.y = pad + i*(H-2*pad)/Math.max(goods.length,1);   });
+
+    const linkData = allEdges.filter(e => e.kind==="cash_flow"||e.kind==="contribution").map(e => {
+      const src = e.kind==="cash_flow" ? allNodes.find(n=>n.id===e.from_id) : allNodes.find(n=>n.id===e.person_id);
+      const tgt = e.kind==="cash_flow" ? allNodes.find(n=>n.id===e.to_id)   : allNodes.find(n=>n.id===e.good_id);
+      return src && tgt ? {source:src, target:tgt, edge:e} : null;
+    }).filter(Boolean);
+
+    const sim = d3.forceSimulation(allNodes)
+      .force("link",d3.forceLink(linkData).id(d=>d.id).distance(150).strength(0.4))
+      .force("charge",d3.forceManyBody().strength(-200))
+      .force("colX",d3.forceX().x(d=>d.kind==="person"?W*0.28:W*0.72).strength(0.3))
+      .force("cy",d3.forceY(H/2).strength(0.05))
+      .alphaDecay(0.05);
+
+    const gL = svg.append("g"), gN = svg.append("g");
+
+    const lSel = gL.selectAll("g").data(linkData).enter().append("g");
+    lSel.append("line")
+      .attr("stroke", d => errEdges.has(d.edge.edge_id)?C.error : d.edge.kind==="cash_flow"?C.cashFlow:C.contrib)
+      .attr("stroke-width", d => d.edge.kind==="cash_flow"?2:1.5)
+      .attr("stroke-dasharray", d => d.edge.kind==="contribution"?"5,3":null)
+      .attr("marker-end", d => errEdges.has(d.edge.edge_id)?"url(#pv-error)":d.edge.kind==="cash_flow"?"url(#pv-cash)":"url(#pv-contrib)");
+    lSel.append("text").attr("text-anchor","middle").attr("font-size","9px").attr("fill",C.fg2)
+      .text(d => d.edge.kind==="cash_flow"?fmtCents(d.edge.amount_cents):`×${d.edge.value??1}`);
+
+    const nSel = gN.selectAll("g").data(allNodes).enter().append("g");
+    nSel.filter(d=>d.kind==="person").append("circle").attr("r",22)
+      .attr("fill",C.personFill).attr("stroke",d=>errNodes.has(d.id)?C.error:C.personStroke).attr("stroke-width",1.5);
+    nSel.filter(d=>d.kind==="good").append("rect").attr("x",-38).attr("y",-18).attr("width",76).attr("height",36).attr("rx",5)
+      .attr("fill",C.goodFill).attr("stroke",d=>errNodes.has(d.id)?C.error:C.goodStroke).attr("stroke-width",1.5);
+    nSel.append("text").attr("text-anchor","middle").attr("dominant-baseline","middle")
+      .attr("font-size","10px").attr("font-weight","600").attr("fill",C.fg)
+      .text(d=>d.display_name||d.id);
+
+    sim.on("tick", () => {
+      allNodes.forEach(d => { d.x=Math.max(45,Math.min(W-45,d.x)); d.y=Math.max(28,Math.min(H-28,d.y)); });
+      lSel.select("line")
+        .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y)
+        .attr("x2",d=>{ const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,len=Math.sqrt(dx*dx+dy*dy)||1,r=d.target.kind==="person"?24:40; return d.target.x-(dx/len)*r; })
+        .attr("y2",d=>{ const dx=d.target.x-d.source.x,dy=d.target.y-d.source.y,len=Math.sqrt(dx*dx+dy*dy)||1,r=d.target.kind==="person"?24:20; return d.target.y-(dy/len)*r; });
+      lSel.select("text").attr("x",d=>(d.source.x+d.target.x)/2).attr("y",d=>(d.source.y+d.target.y)/2-5);
+      nSel.attr("transform",d=>`translate(${d.x},${d.y})`);
+    });
+  }
+
+  return { load, getGraph, onchange, setSlot, renderPreview };
 })();

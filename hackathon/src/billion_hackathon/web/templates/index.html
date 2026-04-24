@@ -20,8 +20,7 @@
       <button type="button" class="tab" data-tab="aggregate" role="tab" aria-selected="false">3 · Aggregation</button>
       <button type="button" class="tab" data-tab="graph" role="tab" aria-selected="false">4 · Graph</button>
       <button type="button" class="tab" data-tab="compute" role="tab" aria-selected="false">5 · Compute</button>
-      <button type="button" class="tab" data-tab="llm" role="tab" aria-selected="false">6 · LLM</button>
-      <button type="button" class="tab" data-tab="pipeline" role="tab" aria-selected="false">Full pipeline</button>
+      <button type="button" class="tab" data-tab="pipeline" role="tab" aria-selected="false">▶ Run</button>
     </nav>
 
     <!-- 1 Collection -->
@@ -146,31 +145,49 @@
       </details>
     </section>
 
-    <!-- 6 LLM -->
-    <section id="panel-llm" class="tab-panel" role="tabpanel" hidden>
-      <h2>llm</h2>
-      <p class="hint">Central stub/provider — wire real HTTP in <code>modules/llm/client.py</code>.</p>
-      <p>
-        <button type="button" id="btn-llm-sample">Load sample messages</button>
-        <button type="button" id="btn-llm-run">Call LLM</button>
-      </p>
-      <label class="lbl"><code>messages</code> JSON</label>
-      <textarea id="tx-llm-in" class="json" rows="10" spellcheck="false"></textarea>
-      <label class="lbl">Output</label>
-      <pre id="out-llm" class="out">…</pre>
-    </section>
-
-    <!-- Full pipeline -->
+    <!-- Run (full pipeline) -->
     <section id="panel-pipeline" class="tab-panel" role="tabpanel" hidden>
-      <h2>Full pipeline</h2>
-      <p class="hint">Runs all stages; optional note appended to session bundle first.</p>
-      <textarea id="tx-pipeline-note" rows="2" class="json" placeholder="Optional note"></textarea>
-      <p>
-        <button type="button" id="btn-example">Weekend example (new session)</button>
-        <button type="button" id="btn-run">Run pipeline on current session + note</button>
-      </p>
-      <label class="lbl">Output</label>
-      <pre id="out-pipeline" class="out">…</pre>
+      <h2>Run</h2>
+      <p class="hint">Load data, then click <strong>Run</strong> — ingest → aggregate → graph → compute.</p>
+
+      <div class="pipeline-load-row">
+        <button type="button" id="btn-pipeline-scenario1">Load scenario 1</button>
+        <button type="button" id="btn-pipeline-clear" class="btn-danger">Clear</button>
+      </div>
+
+      <div id="pipeline-collection-view" class="collection-view"></div>
+
+      <div class="pipeline-run-row">
+        <button type="button" id="btn-pipeline-run" class="btn-run-big">Run</button>
+      </div>
+
+      <div id="pipeline-result" hidden>
+        <div class="pipeline-sections">
+          <div class="pipeline-graph-wrap">
+            <h3 class="pipeline-section-title">Graph <span class="hint" style="text-transform:none;font-weight:400">— click nodes/edges to edit</span></h3>
+            <div class="graph-workspace">
+              <div class="graph-canvas-wrap">
+                <svg id="pipeline-svg"></svg>
+                <div class="graph-toolbar">
+                  <button type="button" id="btn-pipeline-add-person">+ Person</button>
+                  <button type="button" id="btn-pipeline-add-good">+ Good</button>
+                  <button type="button" id="btn-pipeline-add-cashflow">+ Cash flow</button>
+                  <button type="button" id="btn-pipeline-add-contribution">+ Contribution</button>
+                </div>
+              </div>
+              <div class="graph-edit-panel" id="pipeline-edit-panel">
+                <p class="graph-empty">Select a node or edge to edit.</p>
+              </div>
+            </div>
+            <div id="pipeline-graph-issues"></div>
+          </div>
+          <div class="pipeline-compute-wrap">
+            <h3 class="pipeline-section-title">Settlement</h3>
+            <button type="button" id="btn-pipeline-recompute">Re-compute</button>
+            <div id="pipeline-compute-result"></div>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
   <script src="https://d3js.org/d3.v7.min.js"></script>
