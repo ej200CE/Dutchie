@@ -312,26 +312,83 @@ $("btn-graph-run").onclick = async () => {
   }
 };
 
+/* --- Compute result renderer --- */
+function fmtEur(cents) {
+  if (cents == null) return "—";
+  const abs = Math.abs(cents);
+  const s = "€" + (abs / 100).toFixed(2);
+  return cents < 0 ? "-" + s : s;
+}
+
+function renderComputeResult(result, errorMsg) {
+  const el = $("compute-result");
+  if (!result || errorMsg) {
+    el.innerHTML = `<p class="compute-error">${esc(errorMsg || "Unknown error")}</p>`;
+    return;
+  }
+  if (!result.success) {
+    const errs = (result.errors || []).map(e =>
+      `<div class="compute-error-item"><strong>${esc(e.code)}</strong>: ${esc(e.message)}</div>`
+    ).join("");
+    el.innerHTML = `<div class="compute-errors"><p class="compute-error">Computation failed:</p>${errs}</div>`;
+    return;
+  }
+
+  const persons = result.per_person || [];
+  const transfers = result.suggested_transfers || [];
+
+  const cards = persons.map(p => {
+    const net = p.net_cents;
+    const cls = net > 0 ? "creditor" : net < 0 ? "debtor" : "balanced";
+    const netLabel = net > 0 ? `+${fmtEur(net)}` : fmtEur(net);
+    return `<div class="person-card ${cls}">
+      <div class="person-card-name">${esc(p.display_name || p.person_id)}</div>
+      <div class="person-card-rows">
+        <span class="pcr-label">paid</span><span class="pcr-val">${fmtEur(p.paid_out_cents)}</span>
+        <span class="pcr-label">share</span><span class="pcr-val">${fmtEur(p.fair_share_owed_cents)}</span>
+        <span class="pcr-label">net</span><span class="pcr-val net-${cls}">${netLabel}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  const txRows = transfers.length
+    ? transfers.map(t =>
+        `<div class="transfer-row">
+          <span class="tr-from">${esc(t.from_person_id)}</span>
+          <span class="tr-arrow">→</span>
+          <span class="tr-to">${esc(t.to_person_id)}</span>
+          <span class="tr-amount">${fmtEur(t.amount_cents)}</span>
+        </div>`
+      ).join("")
+    : `<p class="compute-balanced">All settled — no transfers needed.</p>`;
+
+  el.innerHTML = `
+    <div class="compute-result">
+      <div class="person-cards">${cards}</div>
+      <div class="transfers-section">
+        <h3 class="transfers-title">Suggested transfers</h3>
+        <div class="transfers-list">${txRows}</div>
+      </div>
+    </div>`;
+}
+
 /* --- Compute --- */
-$("btn-compute-load-session").onclick = async () => {
-  /* prefer the live edited graph from GraphView if available */
+async function resolveGraph() {
+  const override = $("tx-compute-in").value.trim();
+  if (override) return JSON.parse(override);
   const live = GraphView.getGraph();
-  if (live && live.nodes && live.nodes.length > 0) {
-    const g = { nodes: live.nodes, edges: live.edges };
-    $("tx-compute-in").value = JSON.stringify(g, null, 2);
-    return;
-  }
+  if (live && live.nodes && live.nodes.length > 0) return { nodes: live.nodes, edges: live.edges };
   const j = await fetchSession();
-  if (!j.last_graph) {
-    show($("out-compute"), { error: "No graph available — run Build graph first" });
-    return;
-  }
-  const g = { nodes: j.last_graph.nodes, edges: j.last_graph.edges };
-  $("tx-compute-in").value = JSON.stringify(g, null, 2);
-};
+  if (j.last_graph) return { nodes: j.last_graph.nodes, edges: j.last_graph.edges };
+  return null;
+}
 
 $("btn-compute-run").onclick = async () => {
-  const graph = JSON.parse($("tx-compute-in").value || "{}");
+  const graph = await resolveGraph();
+  if (!graph) {
+    renderComputeResult(null, "No graph available — build one in the Graph tab first.");
+    return;
+  }
   const r = await fetch("/api/dev/compute", {
     method: "POST",
     credentials: "same-origin",
@@ -339,7 +396,8 @@ $("btn-compute-run").onclick = async () => {
     body: JSON.stringify({ graph }),
   });
   const j = await r.json();
-  show($("out-compute"), j);
+  renderComputeResult(j.compute ?? j);
+  show($("out-compute"), j.compute ?? j);
 };
 
 /* --- LLM --- */

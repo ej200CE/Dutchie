@@ -614,3 +614,107 @@ code {
 .badge-error   { background: var(--red);    color: var(--bg); }
 .badge-warning { background: var(--yellow); color: var(--bg); }
 .badge-info    { background: var(--blue);   color: var(--bg); }
+
+/* --- Compute tab --- */
+
+.compute-result {
+  margin: 0.75rem 0;
+}
+
+.person-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.person-card {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  border-left: 4px solid var(--bg3);
+}
+
+.person-card.creditor { border-left-color: var(--green); }
+.person-card.debtor   { border-left-color: var(--red); }
+.person-card.balanced { border-left-color: var(--bg4); }
+
+.person-card-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--fg);
+  margin-bottom: 0.45rem;
+}
+
+.person-card-rows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.pcr-label { color: var(--fg3); }
+.pcr-val   { color: var(--fg1); font-variant-numeric: tabular-nums; }
+
+.net-creditor { color: var(--green); font-weight: 700; }
+.net-debtor   { color: var(--red);   font-weight: 700; }
+.net-balanced { color: var(--fg3); }
+
+.transfers-section { margin-top: 0.5rem; }
+
+.transfers-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg2);
+  margin: 0 0 0.5rem;
+}
+
+.transfers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.transfer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--bg2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.tr-from   { font-weight: 600; color: var(--red); }
+.tr-arrow  { color: var(--fg3); }
+.tr-to     { font-weight: 600; color: var(--green); }
+.tr-amount { margin-left: auto; font-weight: 700; color: var(--yellow); font-variant-numeric: tabular-nums; }
+
+.compute-balanced {
+  color: var(--green);
+  font-size: 0.88rem;
+  padding: 0.4rem 0;
+}
+
+.compute-error {
+  color: var(--red);
+  font-size: 0.88rem;
+  margin: 0.5rem 0;
+}
+
+.compute-errors {
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  background: rgba(251,73,52,0.08);
+  margin: 0.5rem 0;
+}
+
+.compute-error-item {
+  font-size: 0.82rem;
+  color: var(--fg1);
+  margin: 0.25rem 0;
+}

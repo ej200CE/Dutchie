@@ -128,15 +128,22 @@
     <!-- 5 Compute -->
     <section id="panel-compute" class="tab-panel" role="tabpanel" hidden>
       <h2>computation</h2>
-      <p class="hint">POST <code>{ "graph": { "nodes", "edges" } }</code></p>
+      <p class="hint">Uses the graph from the Graph tab. Edit the graph there, then run here.</p>
       <p>
-        <button type="button" id="btn-compute-load-session">Load session <code>last_graph</code> (strip schema if needed)</button>
         <button type="button" id="btn-compute-run">Run compute</button>
       </p>
-      <label class="lbl">Input <code>graph</code> JSON</label>
-      <textarea id="tx-compute-in" class="json" rows="12" spellcheck="false"></textarea>
-      <label class="lbl">Output</label>
-      <pre id="out-compute" class="out">…</pre>
+
+      <div id="compute-result"></div>
+
+      <details class="json-details">
+        <summary class="lbl">Override graph JSON (optional)</summary>
+        <textarea id="tx-compute-in" class="json" rows="10" spellcheck="false" placeholder="Leave empty to use the graph from the Graph tab"></textarea>
+      </details>
+
+      <details class="json-details">
+        <summary class="lbl">Raw JSON output</summary>
+        <pre id="out-compute" class="out">…</pre>
+      </details>
     </section>
 
     <!-- 6 LLM -->

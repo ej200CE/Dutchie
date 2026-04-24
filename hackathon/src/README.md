@@ -44,14 +44,20 @@ uv run uvicorn billion_hackathon.main:app --reload --host 127.0.0.1 --port 8080
 
 Open **http://127.0.0.1:8080** — the UI is **dev-oriented**: one **tab per module** so people can work and test **independently**.
 
-Optional LLM env vars (when you wire a real provider inside `llm/client.py`):
+Copy `.env.example` to `.env` and fill in your key to enable real LLM calls:
 
-- `BILLION_LLM_BASE_URL` — e.g. OpenAI-compatible API base  
-- `BILLION_LLM_API_KEY` — secret (never commit)
+```
+BILLION_LLM_PROVIDER=openai          # or: anthropic
+BILLION_LLM_API_KEY=sk-…
+BILLION_LLM_MODEL=gpt-4o             # or: claude-3-5-sonnet-20241022
+BILLION_LLM_BASE_URL=…               # optional: override for OpenAI-compatible endpoints
+```
+
+Without a key the app runs in **stub mode** — EXIF-based placeholders, no network calls.
 
 ## Tests
 
 ```bash
 cd hackathon
-PYTHONPATH=src uv run python -m unittest discover -s tests -p 'test_*.py' -v
+uv run pytest tests/ -v
 ```
