@@ -27,25 +27,34 @@
     <!-- 1 Collection -->
     <section id="panel-collection" class="tab-panel active" role="tabpanel">
       <h2>data_collection</h2>
-      <p class="hint">Uploads + notes → <code>CollectedBundle</code>. Refresh loads server session.</p>
-      <p>
-        <button type="button" id="btn-session-refresh">Refresh session JSON</button>
-        <button type="button" id="btn-load-weekend-coll">Load weekend example into session</button>
-      </p>
-      <label class="lbl">Session <code>collected</code></label>
-      <textarea id="tx-collection" class="json" rows="12" spellcheck="false"></textarea>
-      <div class="row">
-        <form id="form-note" class="inline">
-          <input type="text" name="text" placeholder="Note text (e.g. EXPENSE: …)" size="48" />
-          <button type="submit">Add note</button>
-        </form>
-        <form id="form-upload" class="inline">
-          <input type="file" name="file" />
-          <button type="submit">Upload</button>
-        </form>
+      <p class="hint">Upload files or add notes → <code>CollectedBundle</code>. Images are parsed for EXIF timestamp and GPS.</p>
+
+      <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="File upload area">
+        <span class="drop-icon">⬆</span>
+        <span>Drop files here or <label for="file-pick" class="drop-link">browse</label></span>
+        <span class="drop-hint">Images, PDFs, documents — multiple files OK</span>
+        <input type="file" id="file-pick" name="files" multiple hidden />
       </div>
-      <label class="lbl">Last response</label>
-      <pre id="out-collection" class="out">…</pre>
+
+      <form id="form-note" class="note-row">
+        <input type="text" name="text" id="note-input" placeholder="Add a text note (e.g. EXPENSE: 12000 cents payer=alice …)" />
+        <button type="submit">Add note</button>
+      </form>
+
+      <div class="coll-actions">
+        <button type="button" id="btn-session-refresh">Refresh</button>
+        <button type="button" id="btn-load-weekend-coll">Load weekend example</button>
+        <button type="button" id="btn-clear-coll" class="btn-danger">Clear all</button>
+      </div>
+
+      <div id="collection-view" class="collection-view"></div>
+
+      <details class="json-details">
+        <summary class="lbl">Raw JSON bundle</summary>
+        <textarea id="tx-collection" class="json" rows="10" spellcheck="false"></textarea>
+      </details>
+
+      <pre id="out-collection" class="out" hidden></pre>
     </section>
 
     <!-- 2 Ingestion -->

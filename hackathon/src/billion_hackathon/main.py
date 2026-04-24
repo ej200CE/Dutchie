@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
@@ -134,13 +134,38 @@ async def collect_note(
 async def collect_upload(
     request: Request,
     session_id: str | None = Form(None),
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
 ) -> JSONResponse:
     sid, s = _get_session(request, session_id)
-    content = await file.read()
-    DataCollectionService(UPLOAD_ROOT).add_upload(
-        s.bundle, file.filename or "upload", content, file.content_type
+    svc = DataCollectionService(UPLOAD_ROOT)
+    for file in files:
+        content = await file.read()
+        svc.add_upload(s.bundle, file.filename or "upload", content, file.content_type)
+    return _set_cookie(
+        JSONResponse({"session_id": sid, "bundle": s.bundle.model_dump(mode="json")}),
+        sid,
     )
+
+
+@app.get("/api/collect/file/{item_id}", response_model=None)
+async def get_collected_file(item_id: str, request: Request):
+    _, s = _get_session(request, None)
+    item = next((i for i in s.bundle.items if i.id == item_id), None)
+    if item is None or not item.stored_path:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = Path(item.stored_path)
+    if not path.exists():
+        return JSONResponse({"error": "file not on disk"}, status_code=404)
+    return FileResponse(str(path), media_type=item.mime_type or "application/octet-stream")
+
+
+@app.post("/api/collect/clear")
+async def collect_clear(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    s.bundle.items.clear()
+    s.last_evidence = None
+    s.last_blueprint = None
+    s.last_graph = None
     return _set_cookie(
         JSONResponse({"session_id": sid, "bundle": s.bundle.model_dump(mode="json")}),
         sid,

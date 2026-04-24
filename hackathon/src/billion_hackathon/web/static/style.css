@@ -137,3 +137,257 @@ code {
   padding: 0.1em 0.3em;
   border-radius: 4px;
 }
+
+/* --- Collection tab --- */
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 1.5rem 1rem;
+  border: 2px dashed #aaa;
+  border-radius: 8px;
+  background: #faf9f6;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: #1a472a;
+  background: #f0f7f0;
+}
+
+.drop-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.drop-link {
+  color: #1a472a;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.drop-hint {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.note-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.note-row input[type="text"] {
+  flex: 1;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.coll-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.btn-danger {
+  background: #8b1a1a;
+  border-color: #8b1a1a;
+}
+.btn-danger:hover { background: #a82020; }
+
+/* Summary stats */
+.stat-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.stat {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.stat-img  { background: #dbeafe; color: #1d4ed8; }
+.stat-doc  { background: #fef3c7; color: #92400e; }
+.stat-note { background: #dcfce7; color: #166534; }
+.stat-geo  { background: #fce7f3; color: #9d174d; }
+
+/* Category sections */
+.cat-section {
+  margin-bottom: 1.25rem;
+}
+
+.cat-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #444;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cat-count {
+  font-size: 0.75rem;
+  background: #e5e7eb;
+  color: #374151;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Image grid */
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.6rem;
+}
+
+.img-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+  font-size: 0.75rem;
+}
+
+.img-thumb-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #e9e9e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.img-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.img-meta {
+  padding: 0.35rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+/* Documents */
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.doc-icon { font-size: 1rem; flex-shrink: 0; }
+.fmeta { color: #666; font-size: 0.76rem; }
+
+/* Notes */
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.note-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  background: #f9fdf9;
+  border: 1px solid #d1fae5;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.note-text { flex: 1; word-break: break-word; }
+
+/* Locations */
+.loc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.loc-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  background: #fff7fb;
+  border: 1px solid #fbcfe8;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+/* Shared small elements */
+.fname {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.ts {
+  font-size: 0.72rem;
+  color: #666;
+}
+
+.ts-exif { color: #1d4ed8; }
+
+.gps-link {
+  font-size: 0.72rem;
+  color: #9d174d;
+  text-decoration: none;
+  word-break: break-all;
+}
+.gps-link:hover { text-decoration: underline; }
+
+.empty-state {
+  color: #888;
+  font-size: 0.88rem;
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.json-details {
+  margin-top: 0.75rem;
+}
+
+.json-details summary {
+  cursor: pointer;
+  padding: 0.2rem 0;
+}

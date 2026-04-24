@@ -21,6 +21,15 @@ class CollectedItem(BaseModel):
     mime_type: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # Populated for file uploads
+    original_filename: str | None = None
+    file_size: int | None = None  # bytes
+
+    # Populated from EXIF for images (when available)
+    exif_timestamp: datetime | None = None
+    gps_lat: float | None = None
+    gps_lon: float | None = None
+
 
 class CollectedBundle(BaseModel):
     event_id: str
