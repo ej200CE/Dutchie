@@ -16,10 +16,13 @@ Optional:
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Annotated, Any, Literal, Protocol
 
 from pydantic import BaseModel, Field
+
+log = logging.getLogger("billion.llm")
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +75,7 @@ class StubLLMClient:
     model_name: str = "stub"
 
     def complete(self, messages: list[ChatMessage], *, max_tokens: int = 1024) -> LLMResponse:
+        log.info("stub client — skipping real LLM call (msgs=%d)", len(messages))
         last_user = next(
             (
                 m.content if isinstance(m.content, str) else "[multimodal message]"
@@ -120,6 +124,8 @@ class OpenAICompatibleClient:
     def complete(self, messages: list[ChatMessage], *, max_tokens: int = 1024) -> LLMResponse:
         import httpx
 
+        url = f"{self.base_url}/chat/completions"
+        log.info("→ POST %s  model=%s  msgs=%d  max_tokens=%d", url, self.model, len(messages), max_tokens)
         payload: dict[str, Any] = {
             "model": self.model,
             "max_tokens": max_tokens,
@@ -128,14 +134,16 @@ class OpenAICompatibleClient:
             ],
         }
         resp = httpx.post(
-            f"{self.base_url}/chat/completions",
+            url,
             json=payload,
             headers={"Authorization": f"Bearer {self.api_key}"},
             timeout=60,
         )
+        log.info("← %d  model=%s", resp.status_code, self.model)
         resp.raise_for_status()
         data = resp.json()
         text: str = data["choices"][0]["message"]["content"]
+        log.info("   response: %d chars", len(text))
         return LLMResponse(text=text, model=self.model, raw=data)
 
 
@@ -176,6 +184,8 @@ class AnthropicClient:
     def complete(self, messages: list[ChatMessage], *, max_tokens: int = 1024) -> LLMResponse:
         import httpx
 
+        log.info("→ POST %s/messages  model=%s  msgs=%d  max_tokens=%d",
+                 self._API_BASE, self.model, len(messages), max_tokens)
         system_msgs = [m for m in messages if m.role == "system"]
         other_msgs = [m for m in messages if m.role != "system"]
 
@@ -206,9 +216,11 @@ class AnthropicClient:
             },
             timeout=60,
         )
+        log.info("← %d  model=%s", resp.status_code, self.model)
         resp.raise_for_status()
         data = resp.json()
         text: str = data["content"][0]["text"]
+        log.info("   response: %d chars", len(text))
         return LLMResponse(text=text, model=self.model, raw=data)
 
 
@@ -222,21 +234,19 @@ def get_llm_client() -> LLMClient:
     provider = os.environ.get("BILLION_LLM_PROVIDER", "stub").lower().strip()
 
     if provider == "stub":
+        log.info("provider=stub (set BILLION_LLM_PROVIDER to use a real model)")
         return StubLLMClient()
 
     api_key = os.environ.get("BILLION_LLM_API_KEY", "")
     model = os.environ.get("BILLION_LLM_MODEL", "")
 
     if provider == "anthropic":
-        return AnthropicClient(
-            api_key=api_key,
-            model=model or "claude-3-5-sonnet-20241022",
-        )
+        resolved_model = model or "claude-3-5-sonnet-20241022"
+        log.info("provider=anthropic  model=%s", resolved_model)
+        return AnthropicClient(api_key=api_key, model=resolved_model)
 
     # Default: openai-compatible
     base_url = os.environ.get("BILLION_LLM_BASE_URL", "https://api.openai.com/v1")
-    return OpenAICompatibleClient(
-        api_key=api_key,
-        model=model or "gpt-4o",
-        base_url=base_url,
-    )
+    resolved_model = model or "gpt-4o"
+    log.info("provider=openai  model=%s  base_url=%s", resolved_model, base_url)
+    return OpenAICompatibleClient(api_key=api_key, model=resolved_model, base_url=base_url)

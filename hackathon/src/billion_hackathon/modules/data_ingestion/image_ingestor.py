@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import re
 from pathlib import Path
+
+log = logging.getLogger("billion.ingest")
 
 from billion_hackathon.contracts.collected import CollectedItem
 from billion_hackathon.contracts.evidence import EvidenceItem
@@ -50,6 +53,12 @@ class ImageIngestor:
         context = _exif_context(item)
         b64 = base64.standard_b64encode(raw).decode()
 
+        log.info("image  %s  (%d B)  exif_ts=%s  gps=%s",
+                 item.original_filename or item.id,
+                 len(raw),
+                 item.exif_timestamp.isoformat() if item.exif_timestamp else "—",
+                 f"{item.gps_lat:.4f},{item.gps_lon:.4f}" if item.gps_lat is not None else "—")
+
         messages = [
             ChatMessage(role="system", content=IMAGE_SYSTEM),
             ChatMessage(
@@ -64,9 +73,12 @@ class ImageIngestor:
         response = self._client.complete(messages, max_tokens=2048)
 
         if response.model == "stub":
+            log.info("   → stub (no LLM key)")
             return [_stub_from_exif(item)]
 
-        return _parse(item, response.text)
+        items = _parse(item, response.text)
+        log.info("   → %d evidence item(s) from LLM", len(items))
+        return items
 
 
 # ---------------------------------------------------------------------------

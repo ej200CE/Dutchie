@@ -193,6 +193,12 @@ $("btn-session-refresh").onclick = async () => {
   updateCollectionUI(j.collected);
 };
 
+$("btn-load-scenario1").onclick = async () => {
+  const r = await fetch("/api/collect/scenario1", { method: "POST", credentials: "same-origin" });
+  const j = await r.json();
+  updateCollectionUI(j.bundle);
+};
+
 $("btn-load-weekend-coll").onclick = async () => {
   const r = await fetch("/api/pipeline/from-example", { method: "POST", credentials: "same-origin" });
   const j = await r.json();

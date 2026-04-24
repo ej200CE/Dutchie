@@ -11,8 +11,11 @@ pipeline keeps running.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
+
+log = logging.getLogger("billion.ingest")
 
 from billion_hackathon.contracts.collected import CollectedItem
 from billion_hackathon.contracts.evidence import EvidenceItem
@@ -75,6 +78,8 @@ class DocumentIngestor:
         if not content:
             return [_fallback(item, "could not read file content")]
 
+        log.info("doc    %s  (%s  %d chars)", item.original_filename or item.id, mime, len(content))
+
         messages = [
             ChatMessage(role="system", content=DOCUMENT_SYSTEM),
             ChatMessage(
@@ -89,9 +94,12 @@ class DocumentIngestor:
         response = self._client.complete(messages, max_tokens=2048)
 
         if response.model == "stub":
+            log.info("   → stub (no LLM key)")
             return _stub_from_text(item, content)
 
-        return _parse(item, response.text)
+        items = _parse(item, response.text)
+        log.info("   → %d evidence item(s) from LLM", len(items))
+        return items
 
 
 # ---------------------------------------------------------------------------

@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,8 +34,12 @@ from billion_hackathon.modules.llm.client import ChatMessage, get_llm_client
 
 PKG = Path(__file__).resolve().parent
 HACKATHON_DIR = PKG.parent.parent
+REPO_ROOT = HACKATHON_DIR.parent
+# Tokens and keys: copy repo-root `.env.example` → `.env` (never commit `.env`).
+load_dotenv(REPO_ROOT / ".env")
 WEB = PKG / "web"
 UPLOAD_ROOT = HACKATHON_DIR / "var" / "uploads"
+STORY1_DIR = REPO_ROOT / "Story" / "1"
 
 templates = Jinja2Templates(directory=str(WEB / "templates"))
 
@@ -157,6 +169,24 @@ async def get_collected_file(item_id: str, request: Request):
     if not path.exists():
         return JSONResponse({"error": "file not on disk"}, status_code=404)
     return FileResponse(str(path), media_type=item.mime_type or "application/octet-stream")
+
+
+@app.post("/api/collect/scenario1")
+async def collect_scenario1(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    svc = DataCollectionService(UPLOAD_ROOT)
+    for fname, mime in [
+        ("selfe_of_three1_with_exif.jpg", "image/jpeg"),
+        ("receipt1_with_exif.jpg", "image/jpeg"),
+        ("screenshot1.jpg", "image/jpeg"),
+    ]:
+        path = STORY1_DIR / fname
+        if path.exists():
+            svc.add_upload(s.bundle, fname, path.read_bytes(), mime)
+    return _set_cookie(
+        JSONResponse({"session_id": sid, "bundle": s.bundle.model_dump(mode="json")}),
+        sid,
+    )
 
 
 @app.post("/api/collect/clear")
