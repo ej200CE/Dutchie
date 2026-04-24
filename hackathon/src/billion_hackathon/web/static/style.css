@@ -1,8 +1,26 @@
+/* Gruvbox dark palette */
 :root {
+  --bg:    #282828;
+  --bg1:   #3c3836;
+  --bg2:   #504945;
+  --bg3:   #665c54;
+  --bg4:   #7c6f64;
+  --fg:    #ebdbb2;
+  --fg1:   #d5c4a1;
+  --fg2:   #bdae93;
+  --fg3:   #a89984;
+  --red:   #fb4934;
+  --green: #b8bb26;
+  --yellow:#fabd2f;
+  --blue:  #83a598;
+  --purple:#d3869b;
+  --aqua:  #8ec07c;
+  --orange:#fe8019;
+
   font-family: system-ui, sans-serif;
   line-height: 1.45;
-  color: #1a1a1a;
-  background: #e8e4dc;
+  color: var(--fg);
+  background: var(--bg);
 }
 
 .wrap {
@@ -12,15 +30,17 @@
 }
 
 .hdr .lede {
-  color: #333;
+  color: var(--fg2);
   margin: 0.25rem 0;
 }
 
 .meta {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--fg3);
   margin: 0.5rem 0 1rem;
 }
+
+/* --- Tabs --- */
 
 .tabs {
   display: flex;
@@ -28,7 +48,7 @@
   gap: 0.35rem;
   margin-bottom: 1rem;
   padding: 0.35rem;
-  background: #d8d2c8;
+  background: var(--bg1);
   border-radius: 8px;
 }
 
@@ -36,28 +56,33 @@
   font: inherit;
   font-size: 0.8rem;
   padding: 0.35rem 0.65rem;
-  border: 1px solid #999;
+  border: 1px solid var(--bg3);
   border-radius: 6px;
-  background: #f0ece4;
+  background: var(--bg2);
+  color: var(--fg1);
   cursor: pointer;
 }
 
 .tab:hover {
-  background: #fff;
+  background: var(--bg3);
+  color: var(--fg);
 }
 
 .tab.active {
-  background: #1a472a;
-  color: #fff;
-  border-color: #1a472a;
+  background: var(--bg1);
+  color: var(--yellow);
+  border-color: var(--yellow);
+  font-weight: 600;
 }
+
+/* --- Tab panels --- */
 
 .tab-panel {
   display: none;
   padding: 1rem;
-  background: #fff;
+  background: var(--bg1);
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .tab-panel.active {
@@ -67,11 +92,12 @@
 .tab-panel h2 {
   margin-top: 0;
   font-size: 1.1rem;
+  color: var(--yellow);
 }
 
 .hint {
   font-size: 0.88rem;
-  color: #444;
+  color: var(--fg2);
   margin: 0 0 0.75rem;
 }
 
@@ -79,8 +105,11 @@
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
+  color: var(--fg1);
   margin: 0.5rem 0 0.25rem;
 }
+
+/* --- Form elements --- */
 
 .json {
   width: 100%;
@@ -88,8 +117,15 @@
   box-sizing: border-box;
   font: 0.8rem/1.35 ui-monospace, monospace;
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--bg3);
   border-radius: 6px;
+}
+
+.json:focus {
+  outline: none;
+  border-color: var(--blue);
 }
 
 .row {
@@ -111,29 +147,35 @@ input[type="submit"] {
   font: inherit;
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
-  border: 1px solid #555;
-  background: #222;
-  color: #fff;
+  border: 1px solid var(--bg4);
+  background: var(--bg2);
+  color: var(--fg);
   cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
 }
 
-button:hover {
-  background: #444;
+button:hover,
+input[type="submit"]:hover {
+  background: var(--bg3);
+  border-color: var(--fg3);
 }
 
 .out {
   overflow: auto;
   max-height: 22rem;
   font-size: 0.78rem;
-  background: #f4f2ec;
+  font-family: ui-monospace, monospace;
+  background: var(--bg);
+  color: var(--fg1);
   padding: 0.75rem;
   border-radius: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg2);
 }
 
 code {
   font-size: 0.88em;
-  background: #eee;
+  background: var(--bg2);
+  color: var(--aqua);
   padding: 0.1em 0.3em;
   border-radius: 4px;
 }
@@ -147,9 +189,10 @@ code {
   justify-content: center;
   gap: 0.25rem;
   padding: 1.5rem 1rem;
-  border: 2px dashed #aaa;
+  border: 2px dashed var(--bg3);
   border-radius: 8px;
-  background: #faf9f6;
+  background: var(--bg);
+  color: var(--fg2);
   cursor: pointer;
   user-select: none;
   transition: border-color 0.15s, background 0.15s;
@@ -159,8 +202,9 @@ code {
 
 .drop-zone:hover,
 .drop-zone.drag-over {
-  border-color: #1a472a;
-  background: #f0f7f0;
+  border-color: var(--green);
+  background: var(--bg1);
+  color: var(--fg);
 }
 
 .drop-icon {
@@ -169,7 +213,7 @@ code {
 }
 
 .drop-link {
-  color: #1a472a;
+  color: var(--green);
   text-decoration: underline;
   cursor: pointer;
   font-weight: 600;
@@ -177,7 +221,7 @@ code {
 
 .drop-hint {
   font-size: 0.78rem;
-  color: #888;
+  color: var(--fg3);
 }
 
 .note-row {
@@ -191,8 +235,19 @@ code {
   font: inherit;
   font-size: 0.9rem;
   padding: 0.35rem 0.6rem;
-  border: 1px solid #ccc;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--bg3);
   border-radius: 6px;
+}
+
+.note-row input[type="text"]:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.note-row input[type="text"]::placeholder {
+  color: var(--fg3);
 }
 
 .coll-actions {
@@ -203,10 +258,15 @@ code {
 }
 
 .btn-danger {
-  background: #8b1a1a;
-  border-color: #8b1a1a;
+  background: var(--bg2);
+  border-color: var(--red);
+  color: var(--red);
 }
-.btn-danger:hover { background: #a82020; }
+.btn-danger:hover {
+  background: var(--red);
+  color: var(--bg);
+  border-color: var(--red);
+}
 
 /* Summary stats */
 .stat-bar {
@@ -221,12 +281,13 @@ code {
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   font-weight: 600;
+  border: 1px solid transparent;
 }
 
-.stat-img  { background: #dbeafe; color: #1d4ed8; }
-.stat-doc  { background: #fef3c7; color: #92400e; }
-.stat-note { background: #dcfce7; color: #166534; }
-.stat-geo  { background: #fce7f3; color: #9d174d; }
+.stat-img  { background: #1d3a47; color: var(--blue);   border-color: var(--blue); }
+.stat-doc  { background: #3a2e00; color: var(--yellow); border-color: var(--yellow); }
+.stat-note { background: #2a300a; color: var(--green);  border-color: var(--green); }
+.stat-geo  { background: #3a1d2e; color: var(--purple); border-color: var(--purple); }
 
 /* Category sections */
 .cat-section {
@@ -238,7 +299,7 @@ code {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #444;
+  color: var(--fg2);
   margin: 0 0 0.5rem;
   display: flex;
   align-items: center;
@@ -247,8 +308,8 @@ code {
 
 .cat-count {
   font-size: 0.75rem;
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg2);
+  color: var(--fg2);
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   font-weight: 600;
@@ -262,10 +323,10 @@ code {
 }
 
 .img-card {
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg2);
   border-radius: 8px;
   overflow: hidden;
-  background: #fafafa;
+  background: var(--bg);
   font-size: 0.75rem;
 }
 
@@ -273,7 +334,7 @@ code {
   width: 100%;
   aspect-ratio: 1;
   overflow: hidden;
-  background: #e9e9e9;
+  background: var(--bg2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,15 +366,16 @@ code {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  background: #fafafa;
-  border: 1px solid #e5e7eb;
+  background: var(--bg);
+  border: 1px solid var(--bg2);
   border-radius: 6px;
   font-size: 0.82rem;
   flex-wrap: wrap;
+  color: var(--fg1);
 }
 
 .doc-icon { font-size: 1rem; flex-shrink: 0; }
-.fmeta { color: #666; font-size: 0.76rem; }
+.fmeta { color: var(--fg3); font-size: 0.76rem; }
 
 /* Notes */
 .note-list {
@@ -327,11 +389,12 @@ code {
   align-items: baseline;
   gap: 0.6rem;
   padding: 0.4rem 0.6rem;
-  background: #f9fdf9;
-  border: 1px solid #d1fae5;
+  background: var(--bg);
+  border: 1px solid var(--aqua);
   border-radius: 6px;
   font-size: 0.82rem;
   flex-wrap: wrap;
+  color: var(--fg1);
 }
 
 .note-text { flex: 1; word-break: break-word; }
@@ -348,36 +411,38 @@ code {
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.6rem;
-  background: #fff7fb;
-  border: 1px solid #fbcfe8;
+  background: var(--bg);
+  border: 1px solid var(--purple);
   border-radius: 6px;
   font-size: 0.82rem;
   flex-wrap: wrap;
+  color: var(--fg1);
 }
 
 /* Shared small elements */
 .fname {
   font-weight: 600;
+  color: var(--fg);
   word-break: break-all;
 }
 
 .ts {
   font-size: 0.72rem;
-  color: #666;
+  color: var(--fg3);
 }
 
-.ts-exif { color: #1d4ed8; }
+.ts-exif { color: var(--blue); }
 
 .gps-link {
   font-size: 0.72rem;
-  color: #9d174d;
+  color: var(--purple);
   text-decoration: none;
   word-break: break-all;
 }
 .gps-link:hover { text-decoration: underline; }
 
 .empty-state {
-  color: #888;
+  color: var(--fg3);
   font-size: 0.88rem;
   text-align: center;
   padding: 1.5rem 0;
@@ -390,4 +455,5 @@ code {
 .json-details summary {
   cursor: pointer;
   padding: 0.2rem 0;
+  color: var(--fg2);
 }
