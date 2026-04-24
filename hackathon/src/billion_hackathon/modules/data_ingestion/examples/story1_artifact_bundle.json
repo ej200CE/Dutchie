@@ -1,0 +1,41 @@
+{
+  "event_id": "evt_bar_story1",
+  "items": [
+    {
+      "id": "img-selfie",
+      "kind": "image",
+      "stored_path": "/home/klift/bunq-hackathon-7/billion_idea/Story/1/selfe_of_three1_with_exif.jpg",
+      "mime_type": "image/jpeg",
+      "original_filename": "selfe_of_three1_with_exif.jpg",
+      "file_size": 272858,
+      "exif_timestamp": "2026-03-03T21:00:00Z",
+      "gps_lat": 52.392644,
+      "gps_lon": 4.832337,
+      "created_at": "2026-03-03T21:00:05Z"
+    },
+    {
+      "id": "img-receipt",
+      "kind": "image",
+      "stored_path": "/home/klift/bunq-hackathon-7/billion_idea/Story/1/receipt1_with_exif.jpg",
+      "mime_type": "image/jpeg",
+      "original_filename": "receipt1_with_exif.jpg",
+      "file_size": 325064,
+      "exif_timestamp": "2026-03-03T21:30:00Z",
+      "gps_lat": 52.392644,
+      "gps_lon": 4.832337,
+      "created_at": "2026-03-03T21:30:05Z"
+    },
+    {
+      "id": "img-screenshot",
+      "kind": "image",
+      "stored_path": "/home/klift/bunq-hackathon-7/billion_idea/Story/1/screenshot1.jpg",
+      "mime_type": "image/jpeg",
+      "original_filename": "screenshot1.jpg",
+      "file_size": 134862,
+      "exif_timestamp": null,
+      "gps_lat": null,
+      "gps_lon": null,
+      "created_at": "2026-03-03T22:00:00Z"
+    }
+  ]
+}

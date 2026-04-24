@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -10,11 +11,14 @@ from billion_hackathon.contracts.collected import CollectedBundle
 from billion_hackathon.contracts.evidence import EvidenceBundle
 from billion_hackathon.contracts.graph_blueprint import GraphBlueprint
 from billion_hackathon.modules.computation.engine import compute
+from billion_hackathon.modules.data_collection.service import DataCollectionService
 from billion_hackathon.modules.data_ingestion.service import DataIngestionService
 from billion_hackathon.modules.evidence_aggregation.service import EvidenceAggregationService
 from billion_hackathon.modules.graph_builder.inconsistency import find_inconsistencies
 from billion_hackathon.modules.graph_builder.service import GraphBuilderService
 from billion_hackathon.modules.llm.client import ChatMessage, StubLLMClient
+
+STORY1 = Path("/home/klift/bunq-hackathon-7/billion_idea/Story/1")
 
 PKG = Path(__file__).resolve().parent.parent / "src" / "billion_hackathon"
 
@@ -73,6 +77,57 @@ class ModuleExampleTests(unittest.TestCase):
         got = StubLLMClient().complete(msgs).model_dump()
         expected = _read_llm("expected_stub_response.json")
         self.assertEqual(got, expected)
+
+    # ------------------------------------------------------------------
+    # Story 1 — three friends at a bar
+    # selfie (EXIF: 21:00, GPS Amsterdam), receipt (EXIF: 21:30, same GPS),
+    # transaction screenshot (no EXIF)
+    # ------------------------------------------------------------------
+
+    def test_data_collection_story1(self):
+        """DataCollectionService extracts correct EXIF fields from Story/1 images."""
+        if not STORY1.exists():
+            self.skipTest("Story/1 fixtures not available")
+
+        uploads = [
+            ("selfe_of_three1_with_exif.jpg", "image/jpeg"),
+            ("receipt1_with_exif.jpg", "image/jpeg"),
+            ("screenshot1.jpg", "image/jpeg"),
+        ]
+        expected = json.loads(
+            (PKG / "modules" / "data_collection" / "examples" / "story1_expected_collection.json").read_text()
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            svc = DataCollectionService(Path(tmp))
+            bundle = CollectedBundle(event_id="evt_bar_story1")
+            for fname, mime in uploads:
+                svc.add_upload(bundle, fname, (STORY1 / fname).read_bytes(), mime)
+
+            self.assertEqual(len(bundle.items), len(expected))
+            for item, exp in zip(bundle.items, expected):
+                self.assertEqual(item.kind, exp["kind"], f"{item.original_filename}: kind")
+                self.assertEqual(item.mime_type, exp["mime_type"], f"{item.original_filename}: mime_type")
+                self.assertEqual(item.original_filename, exp["original_filename"])
+                self.assertEqual(item.file_size, exp["file_size"], f"{item.original_filename}: file_size")
+                if exp["exif_timestamp"] is not None:
+                    self.assertIsNotNone(item.exif_timestamp, f"{item.original_filename}: expected exif_timestamp")
+                    self.assertEqual(item.exif_timestamp.isoformat(), exp["exif_timestamp"])
+                else:
+                    self.assertIsNone(item.exif_timestamp, f"{item.original_filename}: expected no exif_timestamp")
+                self.assertEqual(item.gps_lat, exp["gps_lat"], f"{item.original_filename}: gps_lat")
+                self.assertEqual(item.gps_lon, exp["gps_lon"], f"{item.original_filename}: gps_lon")
+
+    def test_data_ingestion_story1_stub(self):
+        """Stub ingestor produces presence_hint items from Story/1 EXIF metadata."""
+        if not STORY1.exists():
+            self.skipTest("Story/1 fixtures not available")
+
+        raw = _read("data_ingestion", "story1_artifact_bundle.json")
+        bundle = CollectedBundle.model_validate(raw)
+        got = DataIngestionService().ingest(bundle)
+        expected = EvidenceBundle.model_validate(_read("data_ingestion", "story1_expected_evidence.json"))
+        self.assertEqual(got.model_dump(), expected.model_dump())
 
     def test_end_to_end_chain(self):
         bundle = CollectedBundle.model_validate(_read("data_collection", "artifact_bundle.json"))

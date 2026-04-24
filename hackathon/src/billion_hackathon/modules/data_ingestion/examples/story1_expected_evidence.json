@@ -1,0 +1,56 @@
+{
+  "event_id": "evt_bar_story1",
+  "items": [
+    {
+      "id": "ev-img-selfie",
+      "source_item_ids": ["img-selfie"],
+      "kind": "presence_hint",
+      "amount_cents": null,
+      "currency": "EUR",
+      "label": null,
+      "payer_person_id": null,
+      "participant_person_ids": [],
+      "confidence": 0.1,
+      "raw_excerpt": "image: selfe_of_three1_with_exif.jpg · taken=2026-03-03 · gps=(52.3926,4.8323)",
+      "extra": {
+        "stub": true,
+        "mime_type": "image/jpeg",
+        "file_size": 272858
+      }
+    },
+    {
+      "id": "ev-img-receipt",
+      "source_item_ids": ["img-receipt"],
+      "kind": "presence_hint",
+      "amount_cents": null,
+      "currency": "EUR",
+      "label": null,
+      "payer_person_id": null,
+      "participant_person_ids": [],
+      "confidence": 0.1,
+      "raw_excerpt": "image: receipt1_with_exif.jpg · taken=2026-03-03 · gps=(52.3926,4.8323)",
+      "extra": {
+        "stub": true,
+        "mime_type": "image/jpeg",
+        "file_size": 325064
+      }
+    },
+    {
+      "id": "ev-img-screenshot",
+      "source_item_ids": ["img-screenshot"],
+      "kind": "presence_hint",
+      "amount_cents": null,
+      "currency": "EUR",
+      "label": null,
+      "payer_person_id": null,
+      "participant_person_ids": [],
+      "confidence": 0.1,
+      "raw_excerpt": "image: screenshot1.jpg",
+      "extra": {
+        "stub": true,
+        "mime_type": "image/jpeg",
+        "file_size": 134862
+      }
+    }
+  ]
+}
