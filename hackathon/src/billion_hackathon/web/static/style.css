@@ -457,3 +457,160 @@ code {
   padding: 0.2rem 0;
   color: var(--fg2);
 }
+
+/* --- Graph tab --- */
+
+.graph-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.graph-workspace {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 0.75rem 0;
+}
+
+.graph-canvas-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#graph-svg {
+  width: 100%;
+  height: 360px;
+  background: var(--bg);
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  display: block;
+}
+
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.graph-toolbar button {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.graph-edit-panel {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.82rem;
+  min-height: 120px;
+}
+
+.graph-edit-panel h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--yellow);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.graph-edit-panel label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--fg2);
+  margin: 0.4rem 0 0.15rem;
+}
+
+.graph-edit-panel input[type="text"],
+.graph-edit-panel input[type="number"],
+.graph-edit-panel select {
+  width: 100%;
+  box-sizing: border-box;
+  font: 0.8rem/1.3 ui-monospace, monospace;
+  padding: 0.25rem 0.4rem;
+  background: var(--bg1);
+  color: var(--fg);
+  border: 1px solid var(--bg3);
+  border-radius: 4px;
+}
+
+.graph-edit-panel input:focus,
+.graph-edit-panel select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.graph-edit-panel .edit-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.graph-edit-panel .edit-actions button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.graph-empty {
+  color: var(--fg3);
+  font-size: 0.8rem;
+  padding: 0.5rem 0;
+}
+
+/* Inconsistency list */
+.inconsistency-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.inconsistency-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border: 1px solid;
+}
+
+.inconsistency-item.error {
+  background: rgba(251, 73, 52, 0.1);
+  border-color: var(--red);
+  color: var(--fg1);
+}
+
+.inconsistency-item.warning {
+  background: rgba(250, 189, 47, 0.1);
+  border-color: var(--yellow);
+  color: var(--fg1);
+}
+
+.inconsistency-item.info {
+  background: rgba(131, 165, 152, 0.1);
+  border-color: var(--blue);
+  color: var(--fg1);
+}
+
+.badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.badge-error   { background: var(--red);    color: var(--bg); }
+.badge-warning { background: var(--yellow); color: var(--bg); }
+.badge-info    { background: var(--blue);   color: var(--bg); }

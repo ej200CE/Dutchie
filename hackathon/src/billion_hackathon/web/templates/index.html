@@ -90,15 +90,39 @@
     <!-- 4 Graph -->
     <section id="panel-graph" class="tab-panel" role="tabpanel" hidden>
       <h2>graph_builder</h2>
-      <p class="hint"><code>GraphBlueprint</code> → snapshot + inconsistencies.</p>
-      <p>
-        <button type="button" id="btn-graph-load-session">Load session <code>last_blueprint</code></button>
+      <p class="hint"><strong>Build graph</strong> runs the blueprint from session (or paste one below). <strong>Load saved graph</strong> restores a previously built graph. Click nodes/edges to edit; inconsistencies highlighted in red.</p>
+
+      <div class="graph-actions">
         <button type="button" id="btn-graph-run">Build graph</button>
-      </p>
-      <label class="lbl">Input <code>blueprint</code> JSON</label>
-      <textarea id="tx-graph-in" class="json" rows="10" spellcheck="false"></textarea>
-      <label class="lbl">Output</label>
-      <pre id="out-graph" class="out">…</pre>
+        <button type="button" id="btn-graph-load-session-graph">Load saved graph</button>
+      </div>
+
+      <details class="json-details">
+        <summary class="lbl">Blueprint JSON input</summary>
+        <textarea id="tx-graph-in" class="json" rows="8" spellcheck="false"></textarea>
+      </details>
+
+      <div class="graph-workspace">
+        <div class="graph-canvas-wrap">
+          <svg id="graph-svg"></svg>
+          <div class="graph-toolbar">
+            <button type="button" id="btn-graph-add-person">+ Person</button>
+            <button type="button" id="btn-graph-add-good">+ Good</button>
+            <button type="button" id="btn-graph-add-cashflow">+ Cash flow</button>
+            <button type="button" id="btn-graph-add-contribution">+ Contribution</button>
+          </div>
+        </div>
+        <div class="graph-edit-panel" id="graph-edit-panel">
+          <p class="graph-empty">Select a node or edge to edit.</p>
+        </div>
+      </div>
+
+      <div id="graph-inconsistencies"></div>
+
+      <details class="json-details">
+        <summary class="lbl">Raw graph JSON</summary>
+        <pre id="out-graph" class="out">…</pre>
+      </details>
     </section>
 
     <!-- 5 Compute -->
@@ -142,6 +166,8 @@
       <pre id="out-pipeline" class="out">…</pre>
     </section>
   </main>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="/static/graph-view.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

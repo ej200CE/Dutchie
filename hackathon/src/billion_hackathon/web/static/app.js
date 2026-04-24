@@ -272,13 +272,26 @@ $("btn-agg-run").onclick = async () => {
 };
 
 /* --- Graph --- */
-$("btn-graph-load-session").onclick = async () => {
+GraphView.onchange(async (graph) => {
+  const r = await fetch("/api/dev/graph/validate", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ graph }),
+  });
+  const j = await r.json();
+  GraphView.load(graph, j.inconsistencies || []);
+  show($("out-graph"), graph);
+});
+
+$("btn-graph-load-session-graph").onclick = async () => {
   const j = await fetchSession();
-  if (!j.last_blueprint) {
-    show($("out-graph"), { error: "No last_blueprint in session" });
+  if (!j.last_graph) {
+    show($("out-graph"), { error: "No last_graph in session — run Build graph first" });
     return;
   }
-  $("tx-graph-in").value = JSON.stringify(j.last_blueprint, null, 2);
+  GraphView.load(j.last_graph, []);
+  show($("out-graph"), j.last_graph);
 };
 
 $("btn-graph-run").onclick = async () => {
@@ -291,14 +304,26 @@ $("btn-graph-run").onclick = async () => {
     body: JSON.stringify({ blueprint }),
   });
   const j = await r.json();
-  show($("out-graph"), j);
+  if (j.graph) {
+    GraphView.load(j.graph, j.inconsistencies || []);
+    show($("out-graph"), j.graph);
+  } else {
+    show($("out-graph"), j);
+  }
 };
 
 /* --- Compute --- */
 $("btn-compute-load-session").onclick = async () => {
+  /* prefer the live edited graph from GraphView if available */
+  const live = GraphView.getGraph();
+  if (live && live.nodes && live.nodes.length > 0) {
+    const g = { nodes: live.nodes, edges: live.edges };
+    $("tx-compute-in").value = JSON.stringify(g, null, 2);
+    return;
+  }
   const j = await fetchSession();
   if (!j.last_graph) {
-    show($("out-compute"), { error: "No last_graph in session" });
+    show($("out-compute"), { error: "No graph available — run Build graph first" });
     return;
   }
   const g = { nodes: j.last_graph.nodes, edges: j.last_graph.edges };

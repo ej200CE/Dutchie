@@ -29,6 +29,7 @@ from billion_hackathon.modules.computation.engine import compute
 from billion_hackathon.modules.data_collection.service import DataCollectionService
 from billion_hackathon.modules.data_ingestion.service import DataIngestionService
 from billion_hackathon.modules.evidence_aggregation.service import EvidenceAggregationService
+from billion_hackathon.modules.graph_builder.inconsistency import find_inconsistencies
 from billion_hackathon.modules.graph_builder.service import GraphBuilderService
 from billion_hackathon.modules.llm.client import ChatMessage, get_llm_client
 
@@ -350,6 +351,21 @@ async def dev_graph(request: Request, body: DevGraphBody) -> JSONResponse:
                 "inconsistencies": [i.model_dump() for i in issues],
             }
         ),
+        sid,
+    )
+
+
+class DevGraphValidateBody(BaseModel):
+    graph: dict[str, Any]
+
+
+@app.post("/api/dev/graph/validate")
+async def dev_graph_validate(request: Request, body: DevGraphValidateBody) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    s.last_graph = body.graph
+    issues = find_inconsistencies(body.graph)
+    return _set_cookie(
+        JSONResponse({"session_id": sid, "inconsistencies": [i.model_dump() for i in issues]}),
         sid,
     )
 
