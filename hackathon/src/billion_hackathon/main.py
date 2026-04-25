@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import base64
+import io
+import asyncio
 import json
 import logging
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +18,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
     datefmt="%H:%M:%S",
 )
+log = logging.getLogger("billion.main")
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, Request, UploadFile
@@ -21,12 +26,19 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, field_validator
+from PIL import Image
 
 from billion_hackathon.contracts.collected import CollectedBundle
 from billion_hackathon.contracts.evidence import EvidenceBundle
 from billion_hackathon.contracts.graph_blueprint import GraphBlueprint
 from billion_hackathon.modules.computation.engine import compute
 from billion_hackathon.modules.data_collection.service import DataCollectionService
+from billion_hackathon.modules.data_ingestion.image_ocr import (
+    classify_image_hint,
+    extract_ocr_text,
+)
+from billion_hackathon.modules.data_ingestion.image_preprocess import preprocess_image_bytes
+from billion_hackathon.modules.data_ingestion.image_segmentation import segment_people
 from billion_hackathon.modules.data_ingestion.service import DataIngestionService
 from billion_hackathon.modules.evidence_aggregation.service import EvidenceAggregationService
 from billion_hackathon.modules.graph_builder.inconsistency import find_inconsistencies
@@ -377,6 +389,131 @@ async def dev_ingest(request: Request, body: DevIngestBody) -> JSONResponse:
         JSONResponse({"session_id": sid, "evidence": ingest.model_dump(mode="json")}),
         sid,
     )
+
+
+@app.post("/api/dev/ingest/audio_preview")
+async def dev_ingest_audio_preview(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    audio_items = [it for it in s.bundle.items if it.kind == "audio"]
+    if not audio_items:
+        return _set_cookie(
+            JSONResponse({"session_id": sid, "error": "No audio item in session bundle"}, status_code=404),
+            sid,
+        )
+    last = audio_items[-1]
+    one = CollectedBundle(event_id=s.bundle.event_id, items=[last])
+    ev = await DataIngestionService().aingest(one)
+    return _set_cookie(
+        JSONResponse(
+            {
+                "session_id": sid,
+                "audio_item_id": last.id,
+                "audio_filename": last.original_filename,
+                "evidence": ev.model_dump(mode="json"),
+            }
+        ),
+        sid,
+    )
+
+
+@app.post("/api/dev/preprocess/inspect")
+async def dev_preprocess_inspect(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    tasks = [asyncio.to_thread(_inspect_preprocess_item, it) for it in s.bundle.items]
+    rows = await asyncio.gather(*tasks)
+    return _set_cookie(JSONResponse({"session_id": sid, "items": rows}), sid)
+
+
+def _inspect_preprocess_item(it) -> dict[str, Any]:
+    t0 = time.perf_counter()
+    log.info("preprocess.inspect start item=%s filename=%s kind=%s", it.id, it.original_filename, it.kind)
+    if it.kind != "image" or not it.stored_path:
+        out = {
+            "item_id": it.id,
+            "kind": it.kind,
+            "filename": it.original_filename,
+            "note": "no image preprocessing for this kind",
+        }
+        log.info(
+            "preprocess.inspect done item=%s filename=%s elapsed_ms=%d note=no-image",
+            it.id,
+            it.original_filename,
+            int((time.perf_counter() - t0) * 1000),
+        )
+        return out
+    p = Path(it.stored_path)
+    if not p.exists():
+        out = {
+            "item_id": it.id,
+            "kind": it.kind,
+            "filename": it.original_filename,
+            "error": "file not found",
+        }
+        log.info(
+            "preprocess.inspect done item=%s filename=%s elapsed_ms=%d error=file-not-found",
+            it.id,
+            it.original_filename,
+            int((time.perf_counter() - t0) * 1000),
+        )
+        return out
+    raw = p.read_bytes()
+    t_pre = time.perf_counter()
+    processed, processed_mime, diag = preprocess_image_bytes(
+        raw,
+        mime_type=it.mime_type or "image/jpeg",
+        original_filename=it.original_filename,
+    )
+    pre_ms = int((time.perf_counter() - t_pre) * 1000)
+    t_ocr = time.perf_counter()
+    ocr_text, ocr_meta = extract_ocr_text(processed)
+    ocr_ms = int((time.perf_counter() - t_ocr) * 1000)
+    hint = classify_image_hint(it.original_filename, ocr_text)
+    t_seg = time.perf_counter()
+    seg_meta, seg_preview_raw, seg_preview_mime = segment_people(processed)
+    seg_ms = int((time.perf_counter() - t_seg) * 1000)
+    out = {
+        "item_id": it.id,
+        "kind": it.kind,
+        "filename": it.original_filename,
+        "mime_type": it.mime_type,
+        "original_url": f"/api/collect/file/{it.id}",
+        "processed_preview_data_url": _preview_data_url(processed, processed_mime),
+        "segmentation_preview_data_url": _preview_data_url(seg_preview_raw, seg_preview_mime),
+        "segmentation_meta": seg_meta,
+        "preprocess": diag,
+        "ocr_meta": ocr_meta,
+        "ocr_text_head": (ocr_text[:600] if ocr_text else ""),
+        "image_type_hint_local": hint,
+    }
+    total_ms = int((time.perf_counter() - t0) * 1000)
+    log.info(
+        "preprocess.inspect done item=%s filename=%s elapsed_ms=%d pre_ms=%d ocr_ms=%d seg_ms=%d ocr_engine=%s seg_engine=%s people=%s",
+        it.id,
+        it.original_filename,
+        total_ms,
+        pre_ms,
+        ocr_ms,
+        seg_ms,
+        (ocr_meta or {}).get("engine", "none"),
+        (seg_meta or {}).get("engine", "none"),
+        (seg_meta or {}).get("people_count", 0),
+    )
+    return out
+
+
+def _preview_data_url(raw: bytes, mime: str) -> str:
+    try:
+        with Image.open(io.BytesIO(raw)) as img:
+            thumb = img.convert("RGB")
+            thumb.thumbnail((360, 360))
+            buf = io.BytesIO()
+            # Use PNG for inspector preview to avoid JPEG artifacts on screenshots.
+            thumb.save(buf, format="PNG", optimize=True)
+            b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+            return f"data:image/png;base64,{b64}"
+    except Exception:
+        b64 = base64.b64encode(raw[:120000]).decode("ascii")
+        return f"data:{mime};base64,{b64}"
 
 
 class DevAggregateBody(BaseModel):

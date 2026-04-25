@@ -57,15 +57,25 @@ def find_inconsistencies(graph: dict[str, Any]) -> list[Inconsistency]:
 
     person_ids = {n["id"] for n in nodes.values() if n.get("kind") == "person"}
     for e in edges:
-        if e.get("kind") == "cash_flow" and e.get("target") == "good":
-            if e.get("from_id") not in person_ids:
-                out.append(
-                    Inconsistency(
-                        code="UNKNOWN_PAYER",
-                        severity="error",
-                        message=f"cash_flow from unknown person {e.get('from_id')}",
-                        edge_ids=[e.get("edge_id") or ""],
-                    )
+        if e.get("kind") != "cash_flow":
+            continue
+        if e.get("from_id") not in person_ids:
+            out.append(
+                Inconsistency(
+                    code="UNKNOWN_PAYER",
+                    severity="error",
+                    message=f"cash_flow from unknown person {e.get('from_id')}",
+                    edge_ids=[e.get("edge_id") or ""],
                 )
+            )
+        if e.get("target") == "person" and e.get("to_id") not in person_ids:
+            out.append(
+                Inconsistency(
+                    code="UNKNOWN_PAYEE",
+                    severity="error",
+                    message=f"cash_flow to unknown person {e.get('to_id')}",
+                    edge_ids=[e.get("edge_id") or ""],
+                )
+            )
 
     return out

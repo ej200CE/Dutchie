@@ -12,7 +12,7 @@ class CollectedItem(BaseModel):
     """One user-supplied blob (note text or uploaded file reference)."""
 
     id: str
-    kind: Literal["note", "image", "file"]
+    kind: Literal["note", "image", "audio", "file"]
     text: str | None = None
     stored_path: str | None = Field(
         default=None,

@@ -16,7 +16,8 @@ The graph tab renders the snapshot as a D3 force-directed diagram:
 |---------|--------|
 | Person node | Circle, Gruvbox blue |
 | Good node | Rectangle, Gruvbox yellow |
-| `cash_flow` edge | Solid orange arrow, labelled with amount |
+| `cash_flow` edge (person→good) | Solid orange arrow, labelled with amount |
+| `cash_flow` edge (person→person payment) | Solid magenta arrow, labelled with amount |
 | `contribution` edge | Dashed aqua arrow, labelled with share value |
 | Inconsistent node | Red ring |
 | Inconsistent edge | Red stroke |
@@ -26,7 +27,7 @@ The graph tab renders the snapshot as a D3 force-directed diagram:
 - **Click a node** → side panel shows editable `display_name`, `stated_total_cents` (goods only), and a Delete button.
 - **Click an edge** → side panel shows editable `amount_cents` (cash flow) or `value` (contribution), plus Delete.
 - **Rename a node** — changing the ID in the edit panel rewrites all referencing edges automatically.
-- **Toolbar**: `+ Person`, `+ Good`, `+ Cash flow`, `+ Contribution` — add new nodes/edges via inline forms.
+- **Toolbar**: `+ Person`, `+ Good`, `+ Cash flow`, `+ Contribution` — add new nodes/edges via inline forms (`+ Cash flow` supports person→good and person→person).
 
 Every edit immediately calls `POST /api/dev/graph/validate` so inconsistency highlights update live.
 
@@ -40,6 +41,7 @@ The edited graph is available to the Compute tab via `GraphView.getGraph()` — 
 | `NO_CONTRIBUTION_UNITS` | error | Good has spend but zero contribution shares |
 | `CONTRIBUTIONS_WITHOUT_SPEND` | warning | Contributions defined but no cash_flow into good |
 | `UNKNOWN_PAYER` | error | `cash_flow.from_id` doesn't match any person node |
+| `UNKNOWN_PAYEE` | error | For person→person payment, `cash_flow.to_id` doesn't match any person node |
 | `BLUEPRINT_ERROR` | error | Invalid operation in the blueprint |
 
 ## API endpoints

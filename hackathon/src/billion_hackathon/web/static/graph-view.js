@@ -159,13 +159,19 @@ const GraphView = (() => {
       .attr("class", "edge-line")
       .attr("stroke", d => {
         if (errEdges.has(d.edge.edge_id)) return C.error;
-        return d.edge.kind === "cash_flow" ? C.cashFlow : C.contrib;
+        if (d.edge.kind === "cash_flow") {
+          return d.edge.target === "person" ? C.p2p : C.cashFlow;
+        }
+        return C.contrib;
       })
       .attr("stroke-width", d => d.edge.kind === "cash_flow" ? 2 : 1.5)
       .attr("stroke-dasharray", d => d.edge.kind === "contribution" ? "5,3" : null)
       .attr("marker-end", d => {
         if (errEdges.has(d.edge.edge_id)) return "url(#arrow-error)";
-        return d.edge.kind === "cash_flow" ? "url(#arrow-cash)" : "url(#arrow-contrib)";
+        if (d.edge.kind === "cash_flow") {
+          return d.edge.target === "person" ? "url(#arrow-p2p)" : "url(#arrow-cash)";
+        }
+        return "url(#arrow-contrib)";
       })
       .attr("cursor", "pointer")
       .on("click", (ev, d) => { ev.stopPropagation(); selectItem("edge", d.edge.edge_id); });
@@ -286,7 +292,10 @@ const GraphView = (() => {
         const d = d3.select(this.parentNode).datum();
         if (errEdges.has(d.edge.edge_id)) return C.error;
         if (_selected?.type === "edge" && _selected.id === d.edge.edge_id) return C.selected;
-        return d.edge.kind === "cash_flow" ? C.cashFlow : C.contrib;
+        if (d.edge.kind === "cash_flow") {
+          return d.edge.target === "person" ? C.p2p : C.cashFlow;
+        }
+        return C.contrib;
       })
       .attr("stroke-width", function() {
         const d = d3.select(this.parentNode).datum();
@@ -441,27 +450,55 @@ const GraphView = (() => {
     const goods   = _graph.nodes.filter(n => n.kind === "good");
 
     if (kind === "cash_flow") {
-      if (!persons.length || !goods.length) {
-        panel.innerHTML = '<p class="graph-empty">Need at least one person and one good first.</p>';
+      if (!persons.length || (!goods.length && persons.length < 2)) {
+        panel.innerHTML = '<p class="graph-empty">Need people (and at least one good for person→good payments).</p>';
         return;
       }
       panel.innerHTML = `
         <h4>Add cash flow</h4>
         <label>Payer (person)</label>
         <select id="ep-from">${persons.map(p => `<option value="${esc(p.id)}">${esc(p.display_name||p.id)}</option>`).join("")}</select>
-        <label>Good</label>
-        <select id="ep-to">${goods.map(g => `<option value="${esc(g.id)}">${esc(g.display_name||g.id)}</option>`).join("")}</select>
+        <label>Target type</label>
+        <select id="ep-target">
+          <option value="good">Good</option>
+          <option value="person">Person</option>
+        </select>
+        <label id="ep-to-label">Good</label>
+        <select id="ep-to"></select>
         <label>Amount (cents)</label>
         <input type="number" id="ep-amount" value="0" />
         <div class="edit-actions"><button id="ep-add" class="save">Add</button></div>`;
 
+      const fromSel = document.getElementById("ep-from");
+      const targetSel = document.getElementById("ep-target");
+      const toLabel = document.getElementById("ep-to-label");
+      const toSel = document.getElementById("ep-to");
+      function renderTargetOptions() {
+        const payer = fromSel.value;
+        if (targetSel.value === "good") {
+          toLabel.textContent = "Good";
+          toSel.innerHTML = goods.map(g => `<option value="${esc(g.id)}">${esc(g.display_name||g.id)}</option>`).join("");
+          toSel.disabled = goods.length === 0;
+          return;
+        }
+        const payees = persons.filter(p => p.id !== payer);
+        toLabel.textContent = "Receiver (person)";
+        toSel.innerHTML = payees.map(p => `<option value="${esc(p.id)}">${esc(p.display_name||p.id)}</option>`).join("");
+        toSel.disabled = payees.length === 0;
+      }
+      fromSel.onchange = renderTargetOptions;
+      targetSel.onchange = renderTargetOptions;
+      renderTargetOptions();
+
       document.getElementById("ep-add").onclick = () => {
         const from = document.getElementById("ep-from").value;
+        const target = document.getElementById("ep-target").value;
         const to   = document.getElementById("ep-to").value;
         const amt  = parseInt(document.getElementById("ep-amount").value) || 0;
-        const eid  = `cf-${to}-${from}`;
+        if (!to) return;
+        const eid  = `cf-${target}-${to}-${from}`;
         if (!_graph.edges.find(e => e.edge_id === eid)) {
-          _graph.edges.push({ kind: "cash_flow", edge_id: eid, from_id: from, to_id: to, target: "good", amount_cents: amt });
+          _graph.edges.push({ kind: "cash_flow", edge_id: eid, from_id: from, to_id: to, target, amount_cents: amt });
         }
         render(); fireChange(); selectItem("edge", eid);
       };
@@ -572,6 +609,7 @@ const GraphView = (() => {
         .append("path").attr("d","M0,-5L10,0L0,5").attr("fill",color);
     }
     mkM("pv-cash",   C.cashFlow);
+    mkM("pv-p2p",    C.p2p);
     mkM("pv-contrib",C.contrib);
     mkM("pv-error",  C.error);
 
@@ -598,10 +636,18 @@ const GraphView = (() => {
 
     const lSel = gL.selectAll("g").data(linkData).enter().append("g");
     lSel.append("line")
-      .attr("stroke", d => errEdges.has(d.edge.edge_id)?C.error : d.edge.kind==="cash_flow"?C.cashFlow:C.contrib)
+      .attr("stroke", d => {
+        if (errEdges.has(d.edge.edge_id)) return C.error;
+        if (d.edge.kind === "cash_flow") return d.edge.target === "person" ? C.p2p : C.cashFlow;
+        return C.contrib;
+      })
       .attr("stroke-width", d => d.edge.kind==="cash_flow"?2:1.5)
       .attr("stroke-dasharray", d => d.edge.kind==="contribution"?"5,3":null)
-      .attr("marker-end", d => errEdges.has(d.edge.edge_id)?"url(#pv-error)":d.edge.kind==="cash_flow"?"url(#pv-cash)":"url(#pv-contrib)");
+      .attr("marker-end", d => {
+        if (errEdges.has(d.edge.edge_id)) return "url(#pv-error)";
+        if (d.edge.kind === "cash_flow") return d.edge.target === "person" ? "url(#pv-p2p)" : "url(#pv-cash)";
+        return "url(#pv-contrib)";
+      });
     lSel.append("text").attr("text-anchor","middle").attr("font-size","9px").attr("fill",C.fg2)
       .text(d => d.edge.kind==="cash_flow"?fmtCents(d.edge.amount_cents):`×${d.edge.value??1}`);
 

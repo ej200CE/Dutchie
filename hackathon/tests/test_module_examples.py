@@ -206,6 +206,40 @@ class ModuleExampleTests(unittest.TestCase):
         self.assertEqual((rls[0].extra or {}).get("good_id"), "dinner_1")
         self.assertEqual(set(rls[0].participant_person_ids), {"a", "b", "c", "d"})
 
+    def test_data_collection_marks_audio_upload_kind(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            svc = DataCollectionService(Path(tmp))
+            bundle = CollectedBundle(event_id="evt_audio_kind")
+            item = svc.add_upload(
+                bundle,
+                "memo.m4a",
+                b"RIFF0000WAVEfmt ",
+                "audio/m4a",
+            )
+            self.assertEqual(item.kind, "audio")
+
+    def test_audio_ingestion_sidecar_transcript_to_spend_hint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            svc = DataCollectionService(Path(tmp))
+            bundle = CollectedBundle(event_id="evt_audio")
+            item = svc.add_upload(
+                bundle,
+                "voice-note.m4a",
+                b"RIFF0000WAVEfmt ",
+                "audio/m4a",
+            )
+            Path(item.stored_path).with_suffix(".txt").write_text(
+                "EXPENSE: 2400 cents for taxi payer=alice participants=alice,bob",
+                encoding="utf-8",
+            )
+            ev = DataIngestionService().ingest(bundle)
+            self.assertEqual(len(ev.items), 1)
+            got = ev.items[0]
+            self.assertEqual(got.kind, "spend_hint")
+            self.assertEqual(got.amount_cents, 2400)
+            self.assertEqual(got.payer_person_id, "alice")
+            self.assertEqual(set(got.participant_person_ids), {"alice", "bob"})
+
     def test_end_to_end_chain(self):
         bundle = CollectedBundle.model_validate(_read("data_collection", "artifact_bundle.json"))
         ev = DataIngestionService().ingest(bundle)

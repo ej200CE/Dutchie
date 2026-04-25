@@ -71,7 +71,11 @@ def compute(graph: dict[str, Any]) -> dict[str, Any]:
     for e in edges:
         if e.get("kind") != "cash_flow":
             continue
-        paid_out[e["from_id"]] += int(e["amount_cents"])
+        amt = int(e["amount_cents"])
+        paid_out[e["from_id"]] += amt
+        # Person-to-person cash flow means receiver already got reimbursed.
+        if e.get("target") == "person":
+            paid_out[e["to_id"]] -= amt
 
     per_person: list[dict[str, Any]] = []
     nets: dict[str, int] = {}

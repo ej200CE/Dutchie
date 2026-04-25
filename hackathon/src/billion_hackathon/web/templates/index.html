@@ -16,6 +16,7 @@
 
     <nav class="tabs" role="tablist" aria-label="Modules">
       <button type="button" class="tab active" data-tab="collection" role="tab" aria-selected="true">1 · Collection</button>
+      <button type="button" class="tab" data-tab="preprocess" role="tab" aria-selected="false">1.5 · Preprocess</button>
       <button type="button" class="tab" data-tab="ingest" role="tab" aria-selected="false">2 · Ingestion</button>
       <button type="button" class="tab" data-tab="aggregate" role="tab" aria-selected="false">3 · Aggregation</button>
       <button type="button" class="tab" data-tab="graph" role="tab" aria-selected="false">4 · Graph</button>
@@ -40,12 +41,31 @@
         <button type="submit">Add note</button>
       </form>
 
-      <div class="coll-actions">
-        <button type="button" id="btn-session-refresh">Refresh</button>
-        <button type="button" id="btn-load-scenario1">Load scenario 1</button>
-        <button type="button" id="btn-load-scenario2">Load scenario 2</button>
-        <button type="button" id="btn-load-weekend-coll">Load weekend example</button>
-        <button type="button" id="btn-clear-coll" class="btn-danger">Clear all</button>
+      <div class="collection-split-grid">
+        <div class="voice-box">
+        <h3>Voice recording</h3>
+        <p class="hint">Record a short voice message, upload it, then extract what was said into structured evidence.</p>
+        <div class="voice-actions">
+          <button type="button" id="btn-voice-record">Start recording</button>
+          <button type="button" id="btn-voice-stop" disabled>Stop</button>
+          <button type="button" id="btn-voice-upload" disabled>Upload voice note</button>
+          <button type="button" id="btn-voice-extract">Extract latest voice note</button>
+        </div>
+        <audio id="voice-preview" controls hidden></audio>
+        <pre id="out-voice" class="out" hidden></pre>
+      </div>
+
+        <div class="scenario-box">
+          <h3>Scenario notes and files</h3>
+          <p class="hint">Load predefined scenario collections (files/notes), or refresh/clear your current session.</p>
+          <div class="coll-actions">
+            <button type="button" id="btn-session-refresh">Refresh</button>
+            <button type="button" id="btn-load-scenario1">Load scenario 1</button>
+            <button type="button" id="btn-load-scenario2">Load scenario 2</button>
+            <button type="button" id="btn-load-weekend-coll">Load weekend example</button>
+            <button type="button" id="btn-clear-coll" class="btn-danger">Clear all</button>
+          </div>
+        </div>
       </div>
 
       <div id="collection-view" class="collection-view"></div>
@@ -56,6 +76,20 @@
       </details>
 
       <pre id="out-collection" class="out" hidden></pre>
+    </section>
+
+    <!-- 1.5 Preprocess -->
+    <section id="panel-preprocess" class="tab-panel" role="tabpanel" hidden>
+      <h2>preprocessing_inspector</h2>
+      <p class="hint">Inspect how each current input file was preprocessed (segmentation, OCR, classification hint).</p>
+      <p>
+        <button type="button" id="btn-preprocess-run">Analyze current session inputs</button>
+      </p>
+      <div id="preprocess-view" class="collection-view"></div>
+      <details class="json-details">
+        <summary class="lbl">Raw preprocess JSON</summary>
+        <pre id="out-preprocess" class="out">…</pre>
+      </details>
     </section>
 
     <!-- 2 Ingestion -->
@@ -163,6 +197,15 @@
 
       <div class="pipeline-run-row">
         <button type="button" id="btn-pipeline-run" class="btn-run-big">Run</button>
+      </div>
+      <div id="pipeline-progress-wrap" class="pipeline-progress-wrap" hidden>
+        <div class="pipeline-progress-head">
+          <span id="pipeline-progress-label">Starting…</span>
+          <span id="pipeline-progress-pct">0%</span>
+        </div>
+        <div class="pipeline-progress-bar">
+          <div id="pipeline-progress-fill" class="pipeline-progress-fill"></div>
+        </div>
       </div>
 
       <div id="pipeline-result" hidden>

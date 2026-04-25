@@ -137,11 +137,39 @@ def _find_cross_image_person_pairs(bundle: EvidenceBundle) -> list[tuple[str, st
 
 def _person_id_merge_map(bundle: EvidenceBundle) -> dict[str, str]:
     pairs = _find_cross_image_person_pairs(bundle)
+    pairs.extend(_alias_person_pairs(bundle))
     ref = _all_reference_person_ids(bundle)
     if not pairs:
         return {x: x for x in ref}
     universe = set(ref) | {x for t in pairs for x in t}
     return _uf_project_to_canonical(universe, pairs)
+
+
+def _alias_person_pairs(bundle: EvidenceBundle) -> list[tuple[str, str]]:
+    """Conservatively merge ids that share explicit aliases from ingestion metadata."""
+    by_alias: dict[str, set[str]] = {}
+    for ev in bundle.items:
+        aliases = (ev.extra or {}).get("person_aliases") or {}
+        if not isinstance(aliases, dict):
+            continue
+        for pid, vals in aliases.items():
+            if not pid or not isinstance(vals, list):
+                continue
+            for v in vals:
+                key = _slug(str(v or ""))
+                if not key:
+                    continue
+                by_alias.setdefault(key, set()).add(str(pid))
+    pairs: list[tuple[str, str]] = []
+    for ids in by_alias.values():
+        if len(ids) < 2:
+            continue
+        ordered = sorted(ids)
+        a = ordered[0]
+        for b in ordered[1:]:
+            if a != b:
+                pairs.append((a, b))
+    return pairs
 
 
 def _remap_evidence_person_ids(
@@ -292,6 +320,22 @@ def _participants_for(ev: EvidenceItem) -> list[str]:
     ))
 
 
+_MIN_CONF_BY_KIND: dict[str, float] = {
+    "spend_hint": 0.35,
+    "receipt_line": 0.3,
+    "p2p_hint": 0.45,
+    "presence_hint": 0.4,
+    "free_text": 0.95,  # effectively ignored for graph construction
+}
+
+
+def _should_use_item(ev: EvidenceItem) -> bool:
+    if (ev.extra or {}).get("needs_review") is True:
+        return False
+    min_conf = _MIN_CONF_BY_KIND.get(ev.kind, 0.4)
+    return float(ev.confidence or 0.0) >= min_conf
+
+
 # ---------------------------------------------------------------------------
 # Rule-based aggregation
 # ---------------------------------------------------------------------------
@@ -325,6 +369,8 @@ def _aggregate_rules(bundle: EvidenceBundle) -> GraphBlueprint:
 
     # Pass 2: process each evidence item
     for ev in bundle.items:
+        if not _should_use_item(ev):
+            continue
         _collect_persons(ev, persons)
 
         if ev.kind == "spend_hint" and ev.payer_person_id and ev.amount_cents is not None:
@@ -390,6 +436,8 @@ def _aggregate_rules(bundle: EvidenceBundle) -> GraphBlueprint:
 
     # Pass 3: cross-correlate receipt_lines (no payer) with matching spend_hints
     for ev in bundle.items:
+        if not _should_use_item(ev):
+            continue
         if ev.kind != "receipt_line" or ev.payer_person_id:
             continue
         ck = _context_key(ev)
@@ -490,7 +538,7 @@ def _aggregate_with_llm(bundle: EvidenceBundle, client: Any) -> GraphBlueprint:
         ),
     ]
     log.info("LLM aggregation: %d evidence items → calling model", len(bundle.items))
-    response = client.complete(messages, max_tokens=4096)
+    response = client.complete(messages, max_tokens=8192)
     return _parse_llm_blueprint(bundle.event_id, response.text)
 
 
@@ -558,7 +606,10 @@ def _parse_llm_blueprint(event_id: str, text: str) -> GraphBlueprint:
 
 class EvidenceAggregationService:
     def __init__(self) -> None:
-        self._client = get_llm_client()
+        import os
+        self._client = get_llm_client(
+            model_override=os.environ.get("BILLION_AGGREGATION_LLM_MODEL") or None
+        )
 
     def aggregate(self, bundle: EvidenceBundle) -> GraphBlueprint:
         mmap = _person_id_merge_map(bundle)
