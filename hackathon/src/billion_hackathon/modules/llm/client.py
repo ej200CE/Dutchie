@@ -126,13 +126,19 @@ class OpenAICompatibleClient:
 
         url = f"{self.base_url}/chat/completions"
         log.info("→ POST %s  model=%s  msgs=%d  max_tokens=%d", url, self.model, len(messages), max_tokens)
+        # o1/o3 reasoning models use max_completion_tokens and don't support response_format
+        is_reasoning = self.model.startswith(("o1", "o3"))
         payload: dict[str, Any] = {
             "model": self.model,
-            "max_tokens": max_tokens,
             "messages": [
                 {"role": m.role, "content": _openai_content(m.content)} for m in messages
             ],
         }
+        if is_reasoning:
+            payload["max_completion_tokens"] = max_tokens
+        else:
+            payload["max_tokens"] = max_tokens
+            payload["response_format"] = {"type": "json_object"}
         resp = httpx.post(
             url,
             json=payload,
@@ -229,8 +235,13 @@ class AnthropicClient:
 # ---------------------------------------------------------------------------
 
 
-def get_llm_client() -> LLMClient:
-    """Return the configured LLM client based on BILLION_LLM_PROVIDER."""
+def get_llm_client(*, model_override: str | None = None) -> LLMClient:
+    """Return the configured LLM client based on BILLION_LLM_PROVIDER.
+
+    model_override: if set, takes precedence over BILLION_LLM_MODEL (and its defaults).
+    Use this to route a specific pipeline step to a stronger model, e.g.:
+      get_llm_client(model_override=os.environ.get("BILLION_AGGREGATION_LLM_MODEL"))
+    """
     provider = os.environ.get("BILLION_LLM_PROVIDER", "stub").lower().strip()
 
     if provider == "stub":
@@ -238,10 +249,10 @@ def get_llm_client() -> LLMClient:
         return StubLLMClient()
 
     api_key = os.environ.get("BILLION_LLM_API_KEY", "")
-    model = os.environ.get("BILLION_LLM_MODEL", "")
+    model = model_override or os.environ.get("BILLION_LLM_MODEL", "")
 
     if provider == "anthropic":
-        resolved_model = model or "claude-3-5-sonnet-20241022"
+        resolved_model = model or "claude-sonnet-4-6"
         log.info("provider=anthropic  model=%s", resolved_model)
         return AnthropicClient(api_key=api_key, model=resolved_model)
 

@@ -5,19 +5,46 @@ from __future__ import annotations
 import io
 import os
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from PIL import Image
 from billion_hackathon.modules.data_ingestion.gpu_runtime import gpu_device_str, use_gpu
 
+# Keywords that indicate the image is a photo of people/scenery — no point running
+# EasyOCR (slow, finds nothing).  Generic names (IMG_1234.jpg) are NOT in this list
+# so they still go through the full OCR path.
+_PHOTO_KEYWORDS = frozenset({"photo", "selfie", "selfe", "tabel", "table", "people", "group", "portrait"})
 
-def extract_ocr_text(raw: bytes) -> tuple[str, dict[str, Any]]:
+
+def _text_content_likely(filename: str | None) -> bool:
+    """Return False only when the filename strongly suggests a people/scenery photo."""
+    if not filename:
+        return True
+    n = Path(filename).stem.lower()
+    return not any(k in n for k in _PHOTO_KEYWORDS)
+
+
+@lru_cache(maxsize=4)
+def _get_easyocr_reader(gpu: bool, model_dir: str) -> Any:
+    """Load and cache the EasyOCR reader — expensive first call, free thereafter."""
+    import easyocr  # type: ignore
+    return easyocr.Reader(
+        ["en"],
+        gpu=gpu,
+        verbose=False,
+        model_storage_directory=model_dir,
+        user_network_directory=model_dir,
+    )
+
+
+def extract_ocr_text(raw: bytes, *, filename: str | None = None) -> tuple[str, dict[str, Any]]:
     """Best-effort OCR using locally available engines.
 
     Priority:
       1) pytesseract (if installed + tesseract binary available)
-      2) easyocr (if installed)
+      2) easyocr (if installed AND filename doesn't suggest a photo)
       3) no OCR
     """
     try:
@@ -41,21 +68,25 @@ def extract_ocr_text(raw: bytes) -> tuple[str, dict[str, Any]]:
     else:
         pyt_err = ""
 
-    # Fallback: easyocr if present.
+    # Skip EasyOCR entirely when the filename indicates a people/scenery photo —
+    # EasyOCR finds nothing there and takes 4–8 seconds.
+    if not _text_content_likely(filename):
+        return "", {
+            "engine": "none",
+            "chars": 0,
+            "reason": "skipped_photo_filename",
+            "attempted": attempted,
+        }
+
+    # Fallback: easyocr with cached reader.
     try:
         attempted.append("easyocr")
         import numpy as np  # type: ignore
-        import easyocr  # type: ignore
 
         arr = np.array(img)
         model_dir = _easyocr_model_dir()
-        reader = easyocr.Reader(
-            ["en"],
-            gpu=use_gpu(),
-            verbose=False,
-            model_storage_directory=str(model_dir),
-            user_network_directory=str(model_dir),
-        )
+        gpu = use_gpu()
+        reader = _get_easyocr_reader(gpu, str(model_dir))
         parts = reader.readtext(arr, detail=0, paragraph=True)
         txt = _cleanup_text("\n".join(parts))
         if txt:
@@ -63,8 +94,8 @@ def extract_ocr_text(raw: bytes) -> tuple[str, dict[str, Any]]:
                 "engine": "easyocr",
                 "chars": len(txt),
                 "model_dir": str(model_dir),
-                "gpu": use_gpu(),
-                "device": gpu_device_str() if use_gpu() else "cpu",
+                "gpu": gpu,
+                "device": gpu_device_str() if gpu else "cpu",
             }
     except Exception as exc:
         easy_err = str(exc)
@@ -107,7 +138,6 @@ def _easyocr_model_dir() -> Path:
     if p:
         d = Path(p)
     else:
-        # Keep cache writable/project-local by default.
         d = Path(__file__).resolve().parents[4] / "var" / "easyocr_models"
     d.mkdir(parents=True, exist_ok=True)
     return d

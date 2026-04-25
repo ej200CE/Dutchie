@@ -68,7 +68,7 @@ class ImageIngestor:
         if len(processed) > _MAX_IMAGE_BYTES:
             return [_fallback(item, f"processed image too large ({len(processed)} bytes, max {_MAX_IMAGE_BYTES})")]
         t1 = time.perf_counter()
-        ocr_text, ocr_meta = extract_ocr_text(processed)
+        ocr_text, ocr_meta = extract_ocr_text(processed, filename=item.original_filename)
         t_ocr = int((time.perf_counter() - t1) * 1000)
         image_hint = classify_image_hint(item.original_filename, ocr_text)
         preprocess_summary = _preprocess_summary(preprocess_diag, ocr_meta, image_hint)

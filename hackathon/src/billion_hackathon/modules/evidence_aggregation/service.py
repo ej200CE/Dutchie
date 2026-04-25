@@ -538,7 +538,7 @@ def _aggregate_with_llm(bundle: EvidenceBundle, client: Any) -> GraphBlueprint:
         ),
     ]
     log.info("LLM aggregation: %d evidence items → calling model", len(bundle.items))
-    response = client.complete(messages, max_tokens=4096)
+    response = client.complete(messages, max_tokens=8192)
     return _parse_llm_blueprint(bundle.event_id, response.text)
 
 
@@ -606,7 +606,10 @@ def _parse_llm_blueprint(event_id: str, text: str) -> GraphBlueprint:
 
 class EvidenceAggregationService:
     def __init__(self) -> None:
-        self._client = get_llm_client()
+        import os
+        self._client = get_llm_client(
+            model_override=os.environ.get("BILLION_AGGREGATION_LLM_MODEL") or None
+        )
 
     def aggregate(self, bundle: EvidenceBundle) -> GraphBlueprint:
         mmap = _person_id_merge_map(bundle)
