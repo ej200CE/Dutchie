@@ -19,7 +19,8 @@ def torch_cuda_available() -> bool:
 def use_gpu() -> bool:
     raw = os.environ.get("BILLION_USE_GPU", "true").strip().lower()
     wanted = raw not in {"0", "false", "no", "off"}
-    return wanted and torch_cuda_available()
+    cuda = torch_cuda_available()  # always call — populates cache before model loading begins
+    return wanted and cuda
 
 
 def gpu_device_str() -> str:
