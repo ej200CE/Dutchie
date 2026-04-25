@@ -32,6 +32,7 @@ from billion_hackathon.modules.evidence_aggregation.service import EvidenceAggre
 from billion_hackathon.modules.graph_builder.inconsistency import find_inconsistencies
 from billion_hackathon.modules.graph_builder.service import GraphBuilderService
 from billion_hackathon.modules.llm.client import ChatMessage, get_llm_client
+from billion_hackathon.modules.bunq_mock.router import router as bunq_mock_router
 
 PKG = Path(__file__).resolve().parent
 HACKATHON_DIR = PKG.parent.parent
@@ -48,6 +49,7 @@ templates = Jinja2Templates(directory=str(WEB / "templates"))
 
 app = FastAPI(title="Billion hackathon", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(WEB / "static")), name="static")
+app.include_router(bunq_mock_router)
 
 
 @dataclass
