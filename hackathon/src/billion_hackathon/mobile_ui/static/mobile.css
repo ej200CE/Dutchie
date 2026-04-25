@@ -1,3 +1,65 @@
+/* ── Graph edit panel (content injected by graph-view.js) ───────────── */
+
+.mobile-graph-edit {
+  background: #3c3836;
+  border: 1px solid #504945;
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-height: 48px;
+  font-size: 13px;
+  color: #ebdbb2;
+}
+
+.mobile-graph-edit label {
+  display: block;
+  font-size: 11px;
+  color: #a89984;
+  margin-bottom: 2px;
+  margin-top: 8px;
+}
+
+.mobile-graph-edit label:first-child {
+  margin-top: 0;
+}
+
+.mobile-graph-edit input {
+  width: 100%;
+  background: #282828;
+  border: 1px solid #504945;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #ebdbb2;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.mobile-graph-edit input:focus {
+  border-color: #83a598;
+}
+
+.mobile-graph-edit button {
+  margin-top: 8px;
+  margin-right: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.mobile-graph-edit button[type="submit"],
+.mobile-graph-edit button.save {
+  background: #fe8019;
+  color: #282828;
+}
+
+.mobile-graph-edit button.delete {
+  background: #504945;
+  color: #fb4934;
+}
+
 /* ── Screen transitions ─────────────────────────────────────────────── */
 
 .screen {
