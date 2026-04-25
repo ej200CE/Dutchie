@@ -77,7 +77,7 @@ PYTHONPATH=src uv run python -m unittest discover -s tests -p 'test_*.py' -v
 | `src/billion_hackathon/modules/evidence_aggregation/` | Evidence → **graph build instructions** |
 | `src/billion_hackathon/modules/graph_builder/` | Apply instructions + **inconsistency** report |
 | `src/billion_hackathon/modules/computation/` | Deterministic balances (same math as `demo-prototype`) |
-| `src/billion_hackathon/modules/llm/` | **Single module** for model requests (stub + future HTTP client) |
+| `src/billion_hackathon/modules/llm/` | **Single module** for model requests (`stub`, OpenAI-compatible, Anthropic) |
 | `src/billion_hackathon/web/` | Jinja templates + static assets (dev tabs UI) |
 | `tests/` | Contract tests driven by each module’s `examples/` |
 

@@ -5,7 +5,9 @@ Automation that you run locally or in CI:
 - `bootstrap.sh` — install deps, copy `.env.example` → `.env` *(add when ready)*
 - One-off migrations, seed data, API smoke tests
 
-Keep scripts **thin**; heavy logic belongs in `src/`.
+**Hackathon app** (under `hackathon/scripts/`): e.g. `assess_scenarios_llm.py` — full ingest → aggregate → graph on Story/1 and Story/2 with a real LLM (see [`hackathon/README.md`](../hackathon/README.md)).
+
+Keep scripts **thin**; heavy logic belongs in `src/` or `hackathon/src/`.
 
 ## `add_exif_to_image.py` — EXIF helper (uv)
 

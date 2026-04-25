@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-**One place** for all large-model requests: chat completions (text + images), API keys, timeouts, and future retry logic. Ingestion and aggregation modules call into here; they do not embed HTTP clients.
+**One place** for all large-model requests: chat completions (text + images), API keys, and timeouts. Ingestion and aggregation modules call into here; they do not embed HTTP clients. Retries/backoff can be centralized here when needed.
 
 ## Providers
 

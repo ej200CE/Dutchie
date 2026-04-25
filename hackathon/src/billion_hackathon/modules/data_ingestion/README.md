@@ -15,6 +15,18 @@ The LLM client is created once in `DataIngestionService.__init__` and shared acr
 LLM calls for all items are dispatched concurrently via `aingest` (the web-server path).
 A sequential `ingest` method is kept for tests and scripts.
 
+## Post-processing (after LLM or stub ingest)
+
+`service._postprocess_evidence` runs on every bundle before it leaves this module:
+
+| Step | Module | Purpose |
+|------|--------|--------|
+| Merge orphan payer | `merge_orphan_payer_with_group.py` | If the receipt/tx payer id does not match `group_pos_*` slots from people photos, remap to the first group slot so the graph does not get an extra person. |
+| Drop inferred photographer | same file | Remove `inferred_photographer_*` when enough `group_pos_*` people are already present. |
+| Consolidate receipt lines | `consolidate_receipt_lines.py` | When many `receipt_line` items come from the **same source image** (vision “menu explosion”), collapse to **one** line aligned with the dominant `spend_hint` total and shared `good_id` / participants. |
+
+Scenario fixtures can bypass vision via `stub_scenario_evidence.py` (`scenario_stub_evidence_if_applicable`).
+
 ## Main idea
 
 Normalization: heterogeneous inputs become comparable evidence rows with **confidence**, **provenance** (`source_item_ids`), and **rich metadata** in `extra` so the aggregator can cross-correlate evidence without re-fetching source files.
@@ -88,7 +100,7 @@ Same structure — `context`, `persons`, `goods` at top level, `good_id` per ite
 
 | Category | Typical evidence kinds produced |
 |----------|---------------------------------|
-| `receipt` | `receipt_line` × N + `spend_hint` for total |
+| `receipt` | Vision may emit `receipt_line` × N + `spend_hint` for total; post-process may **collapse** many lines per image to one shared total for group splits. |
 | `transaction_screenshot` | `spend_hint` |
 | `people_photo` | `presence_hint` |
 | `location_photo` | `presence_hint` or `free_text` |
@@ -140,9 +152,12 @@ Prompts live in [`prompts.py`](prompts.py).
 
 | File | Purpose |
 |------|---------|
-| `service.py` | Entry point — `aingest` (concurrent, FastAPI path) / `ingest` (sequential, tests) |
+| `service.py` | Entry point — `aingest` / `ingest`; chains merge, drop-inferred, consolidate |
 | `image_ingestor.py` | Image → vision LLM → EvidenceItems |
 | `document_ingestor.py` | Text file → text LLM → EvidenceItems |
+| `merge_orphan_payer_with_group.py` | Payer/group id alignment; optional drop of redundant inferred photographer |
+| `consolidate_receipt_lines.py` | Collapse exploded per-dish receipt lines to one total per check image |
+| `stub_scenario_evidence.py` | Deterministic Story/1–2 evidence when running stub scenarios |
 | `prompts.py` | All LLM prompt templates and field-mapping notes |
 
 ## Examples

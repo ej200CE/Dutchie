@@ -57,7 +57,11 @@ Without a key the app runs in **stub mode** — EXIF-based placeholders, no netw
 
 ## Tests
 
+Golden tests use **stdlib `unittest`** (no pytest required):
+
 ```bash
 cd hackathon
-uv run pytest tests/ -v
+PYTHONPATH=src uv run python -m unittest discover -s tests -p 'test_*.py' -v
 ```
+
+See [`../README.md`](../README.md) for the same command and the LLM assessment script.
