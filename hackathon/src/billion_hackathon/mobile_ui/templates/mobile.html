@@ -107,6 +107,13 @@
           <input id="inp-gallery" type="file" accept="image/*,application/pdf" class="hidden" multiple />
         </label>
       </div>
+      <div class="flex flex-col gap-2">
+        <button id="btn-voice-toggle" type="button"
+          class="w-full bg-bg1 border border-bg2 text-fg rounded-xl py-3 text-sm font-medium active:bg-bg2 transition-colors">
+          🎙 Start recording
+        </button>
+        <p id="voice-status" class="text-fg3 text-xs px-1">Tap to record voice note. Tap again to stop and upload.</p>
+      </div>
 
       <!-- Thumbnail grid -->
       <div id="thumb-grid" class="thumb-grid hidden"></div>

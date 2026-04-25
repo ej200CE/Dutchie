@@ -149,8 +149,112 @@ function setEvError(msg) {
   else el.classList.add('hidden');
 }
 
+const btnVoiceToggle = document.getElementById('btn-voice-toggle');
+const voiceStatus = document.getElementById('voice-status');
+let voiceRecorder = null;
+let voiceChunks = [];
+let voiceStream = null;
+let voiceMime = 'audio/webm';
+let isRecording = false;
+
+function setVoiceStatus(msg) {
+  if (!voiceStatus) return;
+  voiceStatus.textContent = msg;
+}
+
+function preferredVoiceMime() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  for (const mime of candidates) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mime)) return mime;
+  }
+  return '';
+}
+
+function voiceExtFromMime(mime) {
+  if (!mime) return 'webm';
+  if (mime.includes('mp4')) return 'm4a';
+  if (mime.includes('ogg')) return 'ogg';
+  if (mime.includes('wav')) return 'wav';
+  return 'webm';
+}
+
+async function startVoiceRecording() {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    setEvError('This browser does not support voice recording.');
+    return;
+  }
+  try {
+    setEvError('');
+    setVoiceStatus('Requesting microphone access…');
+    voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const picked = preferredVoiceMime();
+    voiceMime = picked || 'audio/webm';
+    voiceRecorder = picked ? new MediaRecorder(voiceStream, { mimeType: picked }) : new MediaRecorder(voiceStream);
+    voiceChunks = [];
+    voiceRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) voiceChunks.push(e.data);
+    };
+    voiceRecorder.start();
+    isRecording = true;
+    btnVoiceToggle.textContent = '⏹ Stop & upload';
+    btnVoiceToggle.classList.add('border-red', 'text-red');
+    setVoiceStatus('Recording… tap again to stop and upload.');
+  } catch (e) {
+    isRecording = false;
+    btnVoiceToggle.textContent = '🎙 Start recording';
+    btnVoiceToggle.classList.remove('border-red', 'text-red');
+    setEvError(`Could not start recording: ${e.message}`);
+    setVoiceStatus('Tap to record voice note. Tap again to stop and upload.');
+    try { voiceStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
+    voiceStream = null;
+  }
+}
+
+async function stopAndUploadVoice() {
+  if (!voiceRecorder || !isRecording) return;
+  btnVoiceToggle.disabled = true;
+  setVoiceStatus('Finalizing recording…');
+  const blob = await new Promise((resolve, reject) => {
+    const recorder = voiceRecorder;
+    recorder.onstop = () => resolve(new Blob(voiceChunks, { type: voiceMime }));
+    recorder.onerror = (e) => reject(new Error(e?.error?.message || 'Recorder error'));
+    try { recorder.requestData(); } catch (_) {}
+    recorder.stop();
+  }).catch((e) => {
+    setEvError(`Recording failed: ${e.message}`);
+    return null;
+  });
+
+  try { voiceStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
+  voiceStream = null;
+  voiceRecorder = null;
+  isRecording = false;
+  btnVoiceToggle.textContent = '🎙 Start recording';
+  btnVoiceToggle.classList.remove('border-red', 'text-red');
+
+  if (!blob || blob.size === 0) {
+    btnVoiceToggle.disabled = false;
+    setVoiceStatus('No audio captured. Try again.');
+    return;
+  }
+
+  setVoiceStatus('Uploading voice note…');
+  const ext = voiceExtFromMime(voiceMime);
+  const file = new File([blob], `voice-note-${Date.now()}.${ext}`, { type: voiceMime || 'audio/webm' });
+  await uploadFiles([file]);
+  btnVoiceToggle.disabled = false;
+  setVoiceStatus('Voice note uploaded.');
+}
+
 document.getElementById('inp-camera').addEventListener('change', e => uploadFiles([...e.target.files]));
 document.getElementById('inp-gallery').addEventListener('change', e => uploadFiles([...e.target.files]));
+if (btnVoiceToggle) {
+  btnVoiceToggle.addEventListener('click', async () => {
+    if (isRecording) await stopAndUploadVoice();
+    else await startVoiceRecording();
+  });
+}
 
 document.getElementById('btn-add-note').addEventListener('click', async () => {
   const ta = document.getElementById('inp-note');
@@ -182,8 +286,9 @@ document.getElementById('btn-analyse').addEventListener('click', runPipeline);
 // ── Screen 3: Processing ───────────────────────────────────────────────
 
 const STATUS_LABELS = [
-  'Reading receipts…',
-  'Identifying people…',
+  'Preparing files…',
+  'Reading receipts and notes…',
+  'Processing voice notes…',
   'Building expense graph…',
   'Calculating balances…',
 ];
