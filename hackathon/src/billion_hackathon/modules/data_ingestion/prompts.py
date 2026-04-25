@@ -275,6 +275,9 @@ Items:
 IMAGE_USER_TMPL = """\
 Analyze this image.
 EXIF / upload metadata (may help with datetime and location): {context}
+Known event context from already processed files: {event_context}
+OCR text extracted locally (best effort; may be noisy): {ocr_text}
+Local preprocess summary (deterministic CV/OCR pipeline): {preprocess_summary}
 """
 
 # ---------------------------------------------------------------------------
@@ -387,6 +390,7 @@ Items:
 
 DOCUMENT_USER_TMPL = """\
 Filename: {filename}
+Known event context: {event_context}
 
 --- BEGIN CONTENT ---
 {content}

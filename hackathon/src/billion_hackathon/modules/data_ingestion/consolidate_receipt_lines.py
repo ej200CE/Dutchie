@@ -21,15 +21,24 @@ _MIN_LINE_EXPLOSION = 3
 
 def _dominant_spend(bundle: EvidenceBundle) -> tuple[int | None, EvidenceItem | None, str | None]:
     best_ev: EvidenceItem | None = None
+    best_amount = 0
     for ev in bundle.items:
         if ev.kind != "spend_hint" or not ev.amount_cents:
             continue
-        if best_ev is None or ev.amount_cents > (best_ev.amount_cents or 0):
+        cand = ev.amount_cents
+        for row in (ev.extra or {}).get("amount_candidates") or []:
+            try:
+                if float(row.get("confidence", 0.0)) >= 0.8:
+                    cand = max(cand, int(row.get("amount_cents") or 0))
+            except Exception:
+                continue
+        if best_ev is None or cand > best_amount:
             best_ev = ev
+            best_amount = cand
     if not best_ev:
         return None, None, None
     gid = (best_ev.extra or {}).get("good_id")
-    return best_ev.amount_cents, best_ev, str(gid) if gid else None
+    return best_amount, best_ev, str(gid) if gid else None
 
 
 def _context_total_cents(ctx: dict[str, Any] | None) -> int | None:

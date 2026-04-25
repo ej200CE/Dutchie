@@ -14,6 +14,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 log = logging.getLogger("billion.ingest")
 
@@ -47,7 +48,9 @@ class DocumentIngestor:
     def __init__(self, client: LLMClient) -> None:
         self._client = client
 
-    def ingest(self, item: CollectedItem) -> list[EvidenceItem]:
+    def ingest(
+        self, item: CollectedItem, *, event_context: dict[str, Any] | None = None
+    ) -> list[EvidenceItem]:
         """Return ≥1 EvidenceItems for one file CollectedItem."""
         if not item.stored_path:
             return [_fallback(item, "no stored_path")]
@@ -86,6 +89,7 @@ class DocumentIngestor:
                 role="user",
                 content=DOCUMENT_USER_TMPL.format(
                     filename=item.original_filename or path.name,
+                    event_context=_event_context_text(event_context),
                     content=content[:_MAX_CONTENT_CHARS],
                 ),
             ),
@@ -100,6 +104,18 @@ class DocumentIngestor:
         items = _parse(item, response.text)
         log.info("   → %d evidence item(s) from LLM", len(items))
         return items
+def _event_context_text(event_context: dict[str, Any] | None) -> str:
+    if not event_context:
+        return "none"
+    return (
+        f"candidate_payers={event_context.get('candidate_payers') or []}; "
+        f"candidate_venue={event_context.get('candidate_venue')}; "
+        f"candidate_datetime={event_context.get('candidate_datetime')}; "
+        f"candidate_total_cents={event_context.get('candidate_total_cents')}; "
+        f"expected_group_size={event_context.get('expected_group_size')}"
+    )
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +195,8 @@ def _parse(item: CollectedItem, text: str) -> list[EvidenceItem]:
     persons: list[dict] = data.get("persons") or []
     goods: list[dict] = data.get("goods") or []
     llm_items: list[dict] = data.get("items") or []
+    person_ids = {str(p.get("person_id")) for p in persons if p.get("person_id")}
+    good_ids = {str(g.get("good_id")) for g in goods if g.get("good_id")}
 
     shared_extra = {
         "document_type": doc_type,
@@ -211,6 +229,13 @@ def _parse(item: CollectedItem, text: str) -> list[EvidenceItem]:
         participants = li.get("participant_person_ids") or []
         if not isinstance(participants, list):
             participants = []
+        participants = [str(p) for p in participants if str(p) in person_ids]
+        payer = li.get("payer_person_id")
+        payer = str(payer) if payer and str(payer) in person_ids else None
+        good_id = li.get("good_id")
+        good_id = str(good_id) if good_id and str(good_id) in good_ids else None
+        conf = float(li.get("confidence", overall_conf))
+        needs_review = conf < 0.45
 
         result.append(
             EvidenceItem(
@@ -220,18 +245,68 @@ def _parse(item: CollectedItem, text: str) -> list[EvidenceItem]:
                 amount_cents=amount,
                 currency=li.get("currency") or "EUR",
                 label=li.get("label"),
-                payer_person_id=li.get("payer_person_id"),
+                payer_person_id=payer,
                 participant_person_ids=participants,
-                confidence=float(li.get("confidence", overall_conf)),
+                confidence=conf,
                 raw_excerpt=raw_desc,
                 extra={
                     **shared_extra,
-                    "good_id": li.get("good_id"),
+                    "good_id": good_id,
                     "notes": li.get("notes", ""),
+                    "extraction_mode": "raw_text_llm",
+                    "source_quality": {},
+                    "amount_candidates": _amount_candidates(context, llm_items),
+                    "person_aliases": _person_aliases(persons),
+                    "needs_review": needs_review,
                 },
             )
         )
     return result
+
+
+def _amount_candidates(context: dict[str, Any], llm_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    t = context.get("total_amount_cents")
+    if t is not None:
+        out.append({"amount_cents": int(t), "confidence": 0.9, "source": "context_total"})
+    for it in llm_items:
+        if it.get("amount_cents") is None:
+            continue
+        out.append(
+            {
+                "amount_cents": int(it["amount_cents"]),
+                "confidence": float(it.get("confidence", 0.5)),
+                "source": f"item:{it.get('kind', 'unknown')}",
+            }
+        )
+    out.sort(key=lambda x: x["confidence"], reverse=True)
+    seen: set[int] = set()
+    uniq: list[dict[str, Any]] = []
+    for row in out:
+        cents = int(row["amount_cents"])
+        if cents in seen:
+            continue
+        seen.add(cents)
+        uniq.append(row)
+        if len(uniq) >= 5:
+            break
+    return uniq
+
+
+def _person_aliases(persons: list[dict[str, Any]]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for p in persons:
+        pid = str(p.get("person_id") or "").strip()
+        disp = str(p.get("display_name") or "").strip()
+        if not pid or not disp:
+            continue
+        aliases = [disp]
+        tokens = [x for x in re.split(r"\s+", disp) if x]
+        if len(tokens) >= 2:
+            aliases.append(tokens[-1])
+            aliases.append(f"{tokens[0][0]}. {tokens[-1]}")
+        out[pid] = list(dict.fromkeys(aliases))
+    return out
 
 
 def _fallback(item: CollectedItem, reason: str) -> EvidenceItem:

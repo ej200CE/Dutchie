@@ -250,11 +250,55 @@ code {
   color: var(--fg3);
 }
 
+.voice-box {
+  margin: 0.3rem 0 0.9rem;
+  padding: 0.75rem;
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  background: var(--bg1);
+}
+
+.collection-split-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+}
+
+.scenario-box {
+  padding: 0.75rem;
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  background: var(--bg1);
+}
+
+.scenario-box h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.voice-box h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.voice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+#voice-preview {
+  width: 100%;
+  margin: 0.35rem 0;
+}
+
 .coll-actions {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  margin-bottom: 0.1rem;
 }
 
 .btn-danger {
@@ -292,6 +336,45 @@ code {
 /* Category sections */
 .cat-section {
   margin-bottom: 1.25rem;
+}
+
+.pre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 0.75rem;
+}
+
+.pre-card {
+  border: 1px solid var(--bg2);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 0.6rem;
+}
+
+.pre-card h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.86rem;
+}
+
+.pre-img-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.pre-img-pair img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--bg3);
+}
+
+.pre-meta {
+  font-size: 0.76rem;
+  color: var(--fg2);
+  line-height: 1.35;
 }
 
 .cat-title {
@@ -742,6 +825,38 @@ code {
   margin: 1rem 0 0.5rem;
   display: flex;
   justify-content: center;
+}
+
+.pipeline-progress-wrap {
+  margin: 0.2rem 0 0.9rem;
+  padding: 0.6rem;
+  border: 1px solid var(--bg3);
+  border-radius: 8px;
+  background: var(--bg1);
+}
+
+.pipeline-progress-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--fg2);
+  margin-bottom: 0.35rem;
+}
+
+.pipeline-progress-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+}
+
+.pipeline-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--aqua), var(--green));
+  transition: width 220ms ease;
 }
 
 .btn-run-big {

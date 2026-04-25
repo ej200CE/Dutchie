@@ -86,11 +86,12 @@ class DataCollectionService:
         path.write_bytes(content)
 
         is_image = (mime_type or "").startswith("image/")
+        is_audio = (mime_type or "").startswith("audio/")
         exif_meta = _extract_exif(content) if is_image else {}
 
         item = CollectedItem(
             id=f"file-{uuid.uuid4().hex[:8]}",
-            kind="image" if is_image else "file",
+            kind="image" if is_image else ("audio" if is_audio else "file"),
             stored_path=str(path),
             mime_type=mime_type,
             original_filename=filename,

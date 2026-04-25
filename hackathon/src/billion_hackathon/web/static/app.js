@@ -66,12 +66,14 @@ function renderCollectionView(bundle) {
   }
 
   const images = bundle.items.filter((i) => i.kind === "image");
+  const audios = bundle.items.filter((i) => i.kind === "audio");
   const docs   = bundle.items.filter((i) => i.kind === "file");
   const notes  = bundle.items.filter((i) => i.kind === "note");
   const locs   = images.filter((i) => i.gps_lat != null && i.gps_lon != null);
 
   let html = '<div class="stat-bar">';
   if (images.length) html += `<span class="stat stat-img">🖼 ${images.length} image${images.length !== 1 ? "s" : ""}</span>`;
+  if (audios.length) html += `<span class="stat stat-note">🎤 ${audios.length} audio${audios.length !== 1 ? "s" : ""}</span>`;
   if (docs.length)   html += `<span class="stat stat-doc">📄 ${docs.length} document${docs.length !== 1 ? "s" : ""}</span>`;
   if (notes.length)  html += `<span class="stat stat-note">📝 ${notes.length} note${notes.length !== 1 ? "s" : ""}</span>`;
   if (locs.length)   html += `<span class="stat stat-geo">📍 ${locs.length} with GPS</span>`;
@@ -101,6 +103,22 @@ function renderCollectionView(bundle) {
           ${tsLabel}
           ${gpsHtml}
         </div>
+      </div>`;
+    }
+    html += "</div></div>";
+  }
+
+  if (audios.length) {
+    html += `<div class="cat-section">
+      <h3 class="cat-title">Voice notes <span class="cat-count">${audios.length}</span></h3>
+      <div class="doc-list">`;
+    for (const au of audios) {
+      const ts = fmtTs(au.created_at);
+      html += `<div class="doc-item">
+        <span class="doc-icon">🎤</span>
+        <span class="fname">${esc(au.original_filename || au.id)}</span>
+        <span class="fmeta">${esc(fmtBytes(au.file_size))} · ${esc(au.mime_type || "unknown")}</span>
+        <span class="ts">${esc(ts || "")}</span>
       </div>`;
     }
     html += "</div></div>";
@@ -229,6 +247,189 @@ $("form-note").onsubmit = async (e) => {
   updateCollectionUI(j.bundle);
   e.target.reset();
 };
+
+/* --- Voice note recorder --- */
+let voiceRecorder = null;
+let voiceChunks = [];
+let voiceBlob = null;
+let voiceMime = "audio/webm";
+let voiceStream = null;
+let voiceObjectUrl = null;
+
+const btnVoiceRecord = $("btn-voice-record");
+const btnVoiceStop = $("btn-voice-stop");
+const btnVoiceUpload = $("btn-voice-upload");
+const btnVoiceExtract = $("btn-voice-extract");
+const voicePreview = $("voice-preview");
+const voiceOut = $("out-voice");
+
+function setVoiceOut(data) {
+  if (!voiceOut) {
+    // last-resort fallback so clicks are never "silent"
+    alert(typeof data === "string" ? data : JSON.stringify(data, null, 2));
+    return;
+  }
+  voiceOut.hidden = false;
+  show(voiceOut, data);
+}
+
+function pickRecorderMime() {
+  if (typeof MediaRecorder === "undefined") return null;
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+  ];
+  if (typeof MediaRecorder.isTypeSupported !== "function") return "";
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported(c)) return c;
+  }
+  return "";
+}
+
+function mimeToExt(m) {
+  const s = String(m || "").toLowerCase();
+  if (s.includes("ogg")) return "ogg";
+  if (s.includes("mp4") || s.includes("m4a")) return "m4a";
+  if (s.includes("wav")) return "wav";
+  return "webm";
+}
+
+async function handleVoiceRecord() {
+  try {
+    setVoiceOut({ status: "record-clicked" });
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setVoiceOut({ error: "Browser does not support microphone capture (getUserMedia)." });
+      return;
+    }
+    if (typeof MediaRecorder === "undefined") {
+      setVoiceOut({ error: "Browser does not support MediaRecorder. Try Chrome/Edge/Firefox." });
+      return;
+    }
+    voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const picked = pickRecorderMime();
+    voiceMime = picked || "audio/webm";
+    voiceRecorder = picked ? new MediaRecorder(voiceStream, { mimeType: picked }) : new MediaRecorder(voiceStream);
+    voiceChunks = [];
+    voiceBlob = null;
+    voiceRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) voiceChunks.push(e.data); };
+    voiceRecorder.onerror = (e) => {
+      setVoiceOut({ error: `Recorder error: ${e?.error?.name || "unknown"}` });
+    };
+    voiceRecorder.onstop = () => {
+      voiceBlob = new Blob(voiceChunks, { type: voiceMime });
+      if (voiceObjectUrl) URL.revokeObjectURL(voiceObjectUrl);
+      const url = URL.createObjectURL(voiceBlob);
+      voiceObjectUrl = url;
+      if (voicePreview) {
+        voicePreview.src = url;
+        voicePreview.hidden = false;
+      }
+      if (btnVoiceUpload) btnVoiceUpload.disabled = !voiceBlob || voiceBlob.size === 0;
+      setVoiceOut({ status: "recorded", bytes: voiceBlob.size, mime: voiceMime });
+      if (voiceStream) voiceStream.getTracks().forEach((t) => t.stop());
+      voiceStream = null;
+    };
+    voiceRecorder.start();
+    if (btnVoiceRecord) btnVoiceRecord.disabled = true;
+    if (btnVoiceStop) btnVoiceStop.disabled = false;
+    if (btnVoiceUpload) btnVoiceUpload.disabled = true;
+    setVoiceOut({ status: "recording" });
+  } catch (err) {
+    setVoiceOut({ error: `Microphone access failed: ${String(err)}` });
+  }
+}
+
+function handleVoiceStop() {
+  if (!voiceRecorder || voiceRecorder.state !== "recording") return;
+  try { voiceRecorder.requestData(); } catch (_) {}
+  voiceRecorder.stop();
+  if (btnVoiceRecord) btnVoiceRecord.disabled = false;
+  if (btnVoiceStop) btnVoiceStop.disabled = true;
+}
+
+async function handleVoiceUpload() {
+  if (!voiceBlob) return;
+  const ext = mimeToExt(voiceMime);
+  const file = new File([voiceBlob], `voice-note-${Date.now()}.${ext}`, { type: voiceMime });
+  await uploadFiles([file]);
+  setVoiceOut({ status: "uploaded", filename: file.name, bytes: file.size, mime: file.type });
+}
+
+async function handleVoiceExtract() {
+  const r = await fetch("/api/dev/ingest/audio_preview", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  const j = await r.json();
+  setVoiceOut(j);
+}
+
+if (btnVoiceRecord && btnVoiceStop && btnVoiceUpload && btnVoiceExtract) {
+  btnVoiceRecord.addEventListener("click", handleVoiceRecord);
+  btnVoiceStop.addEventListener("click", handleVoiceStop);
+  btnVoiceUpload.addEventListener("click", handleVoiceUpload);
+  btnVoiceExtract.addEventListener("click", handleVoiceExtract);
+  setVoiceOut({ status: "voice-ui-ready" });
+} else {
+  console.warn("Voice UI elements missing; recorder not initialized");
+}
+
+/* --- 1.5 Preprocess inspector --- */
+function renderPreprocessView(payload) {
+  const host = $("preprocess-view");
+  if (!host) return;
+  if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
+    host.innerHTML = '<p class="empty-state">No inputs in session. Load or upload files first.</p>';
+    return;
+  }
+  const cards = payload.items.map((it) => {
+    if (it.kind !== "image") {
+      return `<div class="pre-card">
+        <h4>${esc(it.filename || it.item_id || "item")}</h4>
+        <div class="pre-meta">kind: <code>${esc(it.kind || "unknown")}</code><br/>${esc(it.note || "no preprocess output")}</div>
+      </div>`;
+    }
+    const p = it.preprocess || {};
+    const q = p.source_quality || {};
+    const ocrMeta = it.ocr_meta || {};
+    const ocrReason = ocrMeta.reason ? ` (${ocrMeta.reason})` : "";
+    return `<div class="pre-card">
+      <h4>${esc(it.filename || it.item_id || "image")}</h4>
+      <div class="pre-img-pair">
+        <img title="original" src="${esc(it.original_url)}" alt="original ${esc(it.filename || "")}" />
+        <img title="preprocessed" src="${esc(it.processed_preview_data_url || "")}" alt="processed ${esc(it.filename || "")}" />
+        <img title="people segmentation overlay" src="${esc(it.segmentation_preview_data_url || it.processed_preview_data_url || "")}" alt="segmented ${esc(it.filename || "")}" />
+      </div>
+      <div class="pre-meta">
+        class_hint: <code>${esc(it.image_type_hint_local || "n/a")}</code><br/>
+        ocr_engine: <code>${esc(ocrMeta.engine || "none")}</code>${esc(ocrReason)}<br/>
+        ocr_head: ${esc((it.ocr_text_head || "").slice(0, 130) || "—")}<br/>
+        people_seg: <code>${esc(JSON.stringify(it.segmentation_meta || {}))}</code><br/>
+        applied: <code>${esc(JSON.stringify(p.applied || []))}</code><br/>
+        quality: <code>blur=${esc(q.blur)} glare=${esc(q.glare)} occ=${esc(q.occlusion)}</code>
+      </div>
+    </div>`;
+  }).join("");
+  host.innerHTML = `<div class="pre-grid">${cards}</div>`;
+}
+
+if ($("btn-preprocess-run")) {
+  $("btn-preprocess-run").addEventListener("click", async () => {
+    const r = await fetch("/api/dev/preprocess/inspect", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const j = await r.json();
+    renderPreprocessView(j);
+    show($("out-preprocess"), j);
+  });
+}
 
 /* --- Ingestion --- */
 $("btn-ingest-load-session").onclick = async () => {
@@ -500,33 +701,95 @@ $("btn-pipeline-clear").onclick = async () => {
   $("pipeline-collection-view").innerHTML = "";
   $("pipeline-result").hidden = true;
   $("tx-graph-in").value = "";
+  const pwrap = $("pipeline-progress-wrap");
+  if (pwrap) pwrap.hidden = true;
 };
+
+function setPipelineProgress(done, total, label) {
+  const wrap = $("pipeline-progress-wrap");
+  const fill = $("pipeline-progress-fill");
+  const pctEl = $("pipeline-progress-pct");
+  const lbl = $("pipeline-progress-label");
+  if (!wrap || !fill || !pctEl || !lbl) return;
+  wrap.hidden = false;
+  const pct = Math.max(0, Math.min(100, Math.round((done / Math.max(1, total)) * 100)));
+  fill.style.width = `${pct}%`;
+  pctEl.textContent = `${pct}%`;
+  lbl.textContent = label;
+}
 
 $("btn-pipeline-run").onclick = async () => {
   const btn = $("btn-pipeline-run");
   btn.disabled = true;
   btn.textContent = "Running…";
+  const totalStages = 5;
   try {
-    const r = await fetch("/api/pipeline/run", {
+    setPipelineProgress(1, totalStages, "Preprocessing inspection");
+    const preResp = await fetch("/api/dev/preprocess/inspect", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
-    const j = await r.json();
-    const graph = j.last_graph;
-    const issues = j.inconsistencies || [];
-    const computeData = j.compute;
+    const preJson = await preResp.json();
+    renderPreprocessView(preJson);
+    show($("out-preprocess"), preJson);
+
+    setPipelineProgress(2, totalStages, "Ingestion");
+    const ingestResp = await fetch("/api/dev/ingest", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collected: null }),
+    });
+    const ingestJson = await ingestResp.json();
+    if (ingestJson.error) throw new Error(ingestJson.error);
+
+    setPipelineProgress(3, totalStages, "Aggregation");
+    const aggResp = await fetch("/api/dev/aggregate", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ evidence: null }),
+    });
+    const aggJson = await aggResp.json();
+    if (aggJson.error) throw new Error(aggJson.error);
+    if (aggJson.blueprint) {
+      $("tx-graph-in").value = JSON.stringify(aggJson.blueprint, null, 2);
+    }
+
+    setPipelineProgress(4, totalStages, "Graph build");
+    const graphResp = await fetch("/api/dev/graph", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blueprint: null }),
+    });
+    const graphJson = await graphResp.json();
+    if (graphJson.error) throw new Error(graphJson.error);
+    const graph = graphJson.graph;
+    const issues = graphJson.inconsistencies || [];
 
     if (graph) {
       GraphView.setSlot({ svgId: "pipeline-svg", editPanelId: "pipeline-edit-panel", issuesId: "pipeline-graph-issues" });
       GraphView.load(graph, issues);
+      show($("out-graph"), graph);
     }
-    if (j.last_blueprint) {
-      $("tx-graph-in").value = JSON.stringify(j.last_blueprint, null, 2);
-    }
-    if (computeData) renderComputeResult(computeData, null, $("pipeline-compute-result"));
+
+    setPipelineProgress(5, totalStages, "Compute");
+    const compResp = await fetch("/api/dev/compute", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ graph }),
+    });
+    const compJson = await compResp.json();
+    renderComputeResult(compJson.compute ?? compJson, null, $("pipeline-compute-result"));
     $("pipeline-result").hidden = false;
+    setPipelineProgress(5, totalStages, "Done");
+  } catch (e) {
+    setPipelineProgress(0, totalStages, `Failed: ${e?.message || String(e)}`);
+    renderComputeResult(null, e?.message || String(e), $("pipeline-compute-result"));
   } finally {
     btn.disabled = false;
     btn.textContent = "Run";

@@ -9,6 +9,7 @@ Each `CollectedItem` is dispatched to the right ingestor based on its `kind`:
 |--------|----------|----------|
 | `note` | inline rule parser | Regex for `EXPENSE:` lines; free_text fallback. Fast, no LLM. |
 | `image` | `ImageIngestor` | Vision LLM → JSON → EvidenceItems. EXIF-based stub when LLM is not configured. |
+| `audio` | `AudioIngestor` | Speech-to-text (OpenAI-compatible when configured), then transcript → evidence extraction. Sidecar `.txt` transcript fallback in stub/dev mode. |
 | `file` | `DocumentIngestor` | Text LLM → JSON → EvidenceItems. Regex stub for `EXPENSE:` lines when LLM is not configured. Binary files (PDF, DOCX) emit a `confidence=0` placeholder. |
 
 The LLM client is created once in `DataIngestionService.__init__` and shared across ingestors.
@@ -17,7 +18,7 @@ A sequential `ingest` method is kept for tests and scripts.
 
 ## Post-processing (after LLM or stub ingest)
 
-`service._postprocess_evidence` runs on every bundle before it leaves this module:
+`service` runs a two-pass ingest (`payer/total-heavy sources` first, then contextual sources with injected event context), then `_postprocess_evidence` on every bundle before it leaves this module:
 
 | Step | Module | Purpose |
 |------|--------|--------|
@@ -30,6 +31,16 @@ Scenario fixtures can bypass vision via `stub_scenario_evidence.py` (`scenario_s
 ## Main idea
 
 Normalization: heterogeneous inputs become comparable evidence rows with **confidence**, **provenance** (`source_item_ids`), and **rich metadata** in `extra` so the aggregator can cross-correlate evidence without re-fetching source files.
+
+### OCR and segmentation (local-first, optional)
+
+- `image_preprocess.py` runs deterministic preprocessing and optional OpenCV document segmentation (`largest quadrilateral` + perspective warp) when OpenCV is available.
+- `image_ocr.py` runs best-effort local OCR:
+  - `pytesseract` if installed and system tesseract is available,
+  - fallback to `easyocr` if installed,
+  - otherwise no OCR.
+- OCR text is injected into the image prompt context and stored in `extra.ocr_text` / `extra.ocr_meta`.
+- A local heuristic class hint (`receipt` vs `transaction_screenshot`) is stored as `extra.image_type_hint_local`.
 
 ## What each ingestor extracts
 
@@ -154,6 +165,8 @@ Prompts live in [`prompts.py`](prompts.py).
 |------|---------|
 | `service.py` | Entry point — `aingest` / `ingest`; chains merge, drop-inferred, consolidate |
 | `image_ingestor.py` | Image → vision LLM → EvidenceItems |
+| `image_preprocess.py` | Deterministic rotate/crop/enhance/resize preprocessing + quality diagnostics |
+| `audio_ingestor.py` | Audio transcription path (OpenAI-compatible or sidecar transcript), then transcript → EvidenceItems |
 | `document_ingestor.py` | Text file → text LLM → EvidenceItems |
 | `merge_orphan_payer_with_group.py` | Payer/group id alignment; optional drop of redundant inferred photographer |
 | `consolidate_receipt_lines.py` | Collapse exploded per-dish receipt lines to one total per check image |
