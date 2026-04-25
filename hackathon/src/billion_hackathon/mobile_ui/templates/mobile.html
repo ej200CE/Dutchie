@@ -175,7 +175,17 @@
 
     <!-- ── Graph view ── -->
     <div id="review-graph-view" class="flex-1 flex flex-col overflow-hidden px-4 pt-3 gap-2">
-      <svg id="mobile-graph-svg" style="width:100%;height:52vh;display:block;"></svg>
+      <div class="flex gap-2 overflow-x-auto pb-1 shrink-0">
+        <button id="btn-graph-add-person"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Person</button>
+        <button id="btn-graph-add-good"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Good</button>
+        <button id="btn-graph-add-cashflow"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Cash flow</button>
+        <button id="btn-graph-add-contribution"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Contribution</button>
+      </div>
+      <svg id="mobile-graph-svg" style="width:100%;height:48vh;display:block;"></svg>
       <div id="mobile-graph-edit" class="mobile-graph-edit overflow-y-auto"></div>
       <div id="mobile-graph-issues" class="flex flex-col gap-1 pb-2"></div>
     </div>
