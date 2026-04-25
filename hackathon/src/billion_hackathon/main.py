@@ -45,12 +45,16 @@ SCENARIO_CACHE_FILE = HACKATHON_DIR / "var" / "scenario_cache.json"
 STORY1_DIR = REPO_ROOT / "Story" / "1"
 STORY2_DIR = REPO_ROOT / "Story" / "2"
 
+MOBILE_UI = PKG / "mobile_ui"
+
 templates = Jinja2Templates(directory=str(WEB / "templates"))
+mobile_templates = Jinja2Templates(directory=str(MOBILE_UI / "templates"))
 
 app = FastAPI(title="Billion hackathon", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(WEB / "static")), name="static")
 app.include_router(bunq_mock_router)
 
+app.mount("/mobile/static", StaticFiles(directory=str(MOBILE_UI / "static")), name="mobile_static")
 
 @dataclass
 class HackathonSession:
@@ -109,6 +113,10 @@ async def home(request: Request) -> HTMLResponse:
         "index.html",
         {"title": "Billion hackathon · dev"},
     )
+
+@app.get("/mobile", response_class=HTMLResponse)
+async def mobile_home(request: Request) -> HTMLResponse:
+    return mobile_templates.TemplateResponse(request, "mobile.html", {})
 
 
 @app.get("/api/dev/session")
