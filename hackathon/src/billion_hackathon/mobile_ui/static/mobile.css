@@ -1,0 +1,128 @@
+/* ── Screen transitions ─────────────────────────────────────────────── */
+
+.screen {
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Spinner ────────────────────────────────────────────────────────── */
+
+.spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Thumbnail grid ─────────────────────────────────────────────────── */
+
+.thumb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.thumb-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: #3c3836;
+  border-radius: 10px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.thumb-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.thumb-note,
+.thumb-file {
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.thumb-label {
+  font-size: 10px;
+  color: #a89984;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* ── Review tab indicator ───────────────────────────────────────────── */
+
+.review-tab {
+  position: relative;
+  color: #a89984;
+  transition: color 0.12s;
+}
+
+.review-tab.active-tab {
+  color: #ebdbb2;
+}
+
+.review-tab.active-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #fe8019;
+  border-radius: 2px 2px 0 0;
+}
+
+/* ── Safe area insets (notch / home bar) ────────────────────────────── */
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Edit panel animation ───────────────────────────────────────────── */
+
+.edit-panel:not(.hidden) {
+  animation: slideDown 0.15s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Select element styling ─────────────────────────────────────────── */
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a89984' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* ── Modal slide-up ─────────────────────────────────────────────────── */
+
+.modal > div {
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
