@@ -518,6 +518,19 @@ const GraphView = (() => {
     _slot = { ..._slot, ...config };
   }
 
+  function clearGraph() {
+    if (_simulation) { _simulation.stop(); _simulation = null; }
+    const svg = svgEl();
+    if (svg) d3.select(svg).selectAll("*").remove();
+    const panel = panelEl();
+    if (panel) panel.innerHTML = '<p class="graph-empty">Select a node or edge to edit.</p>';
+    const issues = issuesEl();
+    if (issues) issues.innerHTML = "";
+    _graph = { event_id: "", nodes: [], edges: [] };
+    _issues = [];
+    _selected = null;
+  }
+
   /* wire toolbar buttons for any tab that has add buttons */
   document.addEventListener("DOMContentLoaded", () => {
     const actions = [
@@ -608,5 +621,5 @@ const GraphView = (() => {
     });
   }
 
-  return { load, getGraph, onchange, setSlot, renderPreview };
+  return { load, getGraph, onchange, setSlot, clearGraph, renderPreview };
 })();

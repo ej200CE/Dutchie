@@ -19,7 +19,22 @@ from billion_hackathon.contracts.collected import CollectedBundle, CollectedItem
 from billion_hackathon.contracts.evidence import EvidenceBundle, EvidenceItem
 from billion_hackathon.modules.data_ingestion.document_ingestor import DocumentIngestor
 from billion_hackathon.modules.data_ingestion.image_ingestor import ImageIngestor
+from billion_hackathon.modules.data_ingestion.consolidate_receipt_lines import (
+    consolidate_receipt_lines_for_group_bill,
+)
+from billion_hackathon.modules.data_ingestion.merge_orphan_payer_with_group import (
+    drop_inferred_photographer_if_group_full,
+    merge_orphan_payer_with_group_slot,
+)
+from billion_hackathon.modules.data_ingestion.stub_scenario_evidence import (
+    scenario_stub_evidence_if_applicable,
+)
 from billion_hackathon.modules.llm.client import get_llm_client
+
+def _postprocess_evidence(b: EvidenceBundle) -> EvidenceBundle:
+    b = drop_inferred_photographer_if_group_full(b)
+    return consolidate_receipt_lines_for_group_bill(b)
+
 
 _NOTE_EXPENSE = re.compile(
     r"^EXPENSE:\s*(?P<cents>\d+)\s*cents\s+for\s+(?P<label>[\w\s-]+?)"
@@ -76,14 +91,28 @@ class DataIngestionService:
 
     async def aingest(self, bundle: CollectedBundle) -> EvidenceBundle:
         """Ingest all items concurrently — each blocking LLM call runs in a thread."""
+        stub = scenario_stub_evidence_if_applicable(bundle)
+        if stub is not None:
+            return _postprocess_evidence(merge_orphan_payer_with_group_slot(stub))
         tasks = [asyncio.to_thread(self._process_item, item) for item in bundle.items]
         results = await asyncio.gather(*tasks)
         out = [ev for items in results for ev in items]
-        return EvidenceBundle(event_id=bundle.event_id, items=out)
+        return _postprocess_evidence(
+            merge_orphan_payer_with_group_slot(
+                EvidenceBundle(event_id=bundle.event_id, items=out)
+            )
+        )
 
     def ingest(self, bundle: CollectedBundle) -> EvidenceBundle:
         """Sequential sync path — used by tests and scripts."""
+        stub = scenario_stub_evidence_if_applicable(bundle)
+        if stub is not None:
+            return _postprocess_evidence(merge_orphan_payer_with_group_slot(stub))
         out: list[EvidenceItem] = []
         for item in bundle.items:
             out.extend(self._process_item(item))
-        return EvidenceBundle(event_id=bundle.event_id, items=out)
+        return _postprocess_evidence(
+            merge_orphan_payer_with_group_slot(
+                EvidenceBundle(event_id=bundle.event_id, items=out)
+            )
+        )

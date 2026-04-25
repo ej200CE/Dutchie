@@ -44,6 +44,18 @@ PYTHONPATH=src uvicorn billion_hackathon.main:app --reload --host 127.0.0.1 --po
 
 Open **http://127.0.0.1:8080** — the UI uses **tabs** (one per module + full pipeline) for parallel dev work.
 
+### LLM end-to-end check (Story/1 and Story/2)
+
+With a real key in the **repository root** `.env` (`BILLION_LLM_PROVIDER=openai`, `BILLION_LLM_API_KEY`, optional `BILLION_LLM_MODEL`):
+
+```bash
+cd hackathon
+uv run python scripts/assess_scenarios_llm.py          # both stories
+uv run python scripts/assess_scenarios_llm.py --story 1  # bar / three friends
+```
+
+Artifacts land under `hackathon/.cache/assess_runs/` (`storyN_evidence.json`, `storyN_graph.json`, …). The script **refuses** `provider=stub` so you always measure real vision + aggregation. If OpenAI returns **429**, wait and re-run; aggregation may fall back to rules for that call.
+
 ### Tests (golden `examples/`)
 
 Uses **stdlib `unittest`** so you can run without pytest:

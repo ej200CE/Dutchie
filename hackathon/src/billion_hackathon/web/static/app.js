@@ -197,18 +197,28 @@ $("btn-load-scenario1").onclick = async () => {
   const r = await fetch("/api/collect/scenario1", { method: "POST", credentials: "same-origin" });
   const j = await r.json();
   updateCollectionUI(j.bundle);
+  $("tx-graph-in").value = "";
+};
+
+$("btn-load-scenario2").onclick = async () => {
+  const r = await fetch("/api/collect/scenario2", { method: "POST", credentials: "same-origin" });
+  const j = await r.json();
+  updateCollectionUI(j.bundle);
+  $("tx-graph-in").value = "";
 };
 
 $("btn-load-weekend-coll").onclick = async () => {
   const r = await fetch("/api/pipeline/from-example", { method: "POST", credentials: "same-origin" });
   const j = await r.json();
   updateCollectionUI(j.collected);
+  $("tx-graph-in").value = "";
 };
 
 $("btn-clear-coll").onclick = async () => {
   const r = await fetch("/api/collect/clear", { method: "POST", credentials: "same-origin" });
   const j = await r.json();
   updateCollectionUI(j.bundle);
+  $("tx-graph-in").value = "";
 };
 
 $("form-note").onsubmit = async (e) => {
@@ -248,6 +258,14 @@ $("btn-ingest-load-scenario1").onclick = async () => {
   show($("out-ingest"), j);
 };
 
+$("btn-ingest-load-scenario2").onclick = async () => {
+  const r = await fetch("/api/scenario2/evidence", { credentials: "same-origin" });
+  const j = await r.json();
+  if (j.error) { show($("out-ingest"), j); return; }
+  $("tx-aggregate-in").value = JSON.stringify(j, null, 2);
+  show($("out-ingest"), j);
+};
+
 /* --- Aggregation --- */
 $("btn-agg-load-session").onclick = async () => {
   const j = await fetchSession();
@@ -269,9 +287,32 @@ $("btn-agg-run").onclick = async () => {
   });
   const j = await r.json();
   show($("out-aggregate"), j);
+  if (j.error == null && j.blueprint) {
+    $("tx-graph-in").value = JSON.stringify(j.blueprint, null, 2);
+  }
 };
 
 /* --- Graph --- */
+/** Accept pasted GraphBlueprint or a full API aggregate response (session_id + blueprint). */
+function graphBlueprintFromInputJson(parsed) {
+  if (parsed == null || typeof parsed !== "object") return null;
+  if (parsed.event_id && Array.isArray(parsed.operations)) return parsed;
+  const inner = parsed.blueprint;
+  if (inner && inner.event_id && Array.isArray(inner.operations)) return inner;
+  return null;
+}
+
+function showGraphError(msg) {
+  const el = $("graph-error");
+  el.textContent = msg;
+  el.hidden = false;
+}
+function clearGraphError() {
+  const el = $("graph-error");
+  el.textContent = "";
+  el.hidden = true;
+}
+
 GraphView.onchange(async (graph) => {
   const r = await fetch("/api/dev/graph/validate", {
     method: "POST",
@@ -308,7 +349,24 @@ $("btn-graph-load-session-graph").onclick = async () => {
 $("btn-graph-run").onclick = async () => {
   GraphView.setSlot({ svgId: "graph-svg", editPanelId: "graph-edit-panel", issuesId: "graph-inconsistencies" });
   const raw = $("tx-graph-in").value.trim();
-  const blueprint = raw ? JSON.parse(raw) : null;
+  let blueprint = null;
+  if (raw) {
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      GraphView.clearGraph();
+      showGraphError("Blueprint JSON: " + (e && e.message ? e.message : String(e)));
+      return;
+    }
+    blueprint = graphBlueprintFromInputJson(parsed);
+    if (!blueprint) {
+      GraphView.clearGraph();
+      showGraphError("Blueprint JSON must be a GraphBlueprint (event_id + operations), or a response object that includes a blueprint field.");
+      return;
+    }
+  }
+  /* Server: body.blueprint when non-null, else s.last_blueprint, else re-aggregate from last_evidence */
   const r = await fetch("/api/dev/graph", {
     method: "POST",
     credentials: "same-origin",
@@ -317,10 +375,12 @@ $("btn-graph-run").onclick = async () => {
   });
   const j = await r.json();
   if (j.graph) {
+    clearGraphError();
     GraphView.load(j.graph, j.inconsistencies || []);
     show($("out-graph"), j.graph);
   } else {
-    show($("out-graph"), j);
+    GraphView.clearGraph();
+    showGraphError(j.error || JSON.stringify(j));
   }
 };
 
@@ -349,6 +409,10 @@ function renderComputeResult(result, errorMsg, target) {
   const persons = result.per_person || [];
   const transfers = result.suggested_transfers || [];
 
+  const nameMap = Object.fromEntries(
+    persons.map(p => [p.person_id, p.display_name || p.person_id])
+  );
+
   const cards = persons.map(p => {
     const net = p.net_cents;
     const cls = net > 0 ? "creditor" : net < 0 ? "debtor" : "balanced";
@@ -366,9 +430,9 @@ function renderComputeResult(result, errorMsg, target) {
   const txRows = transfers.length
     ? transfers.map(t =>
         `<div class="transfer-row">
-          <span class="tr-from">${esc(t.from_person_id)}</span>
+          <span class="tr-from">${esc(nameMap[t.from_person_id] ?? t.from_person_id)}</span>
           <span class="tr-arrow">→</span>
-          <span class="tr-to">${esc(t.to_person_id)}</span>
+          <span class="tr-to">${esc(nameMap[t.to_person_id] ?? t.to_person_id)}</span>
           <span class="tr-amount">${fmtEur(t.amount_cents)}</span>
         </div>`
       ).join("")
@@ -418,6 +482,15 @@ $("btn-pipeline-scenario1").onclick = async () => {
   const j = await r.json();
   renderCollectionView(j.bundle);
   $("pipeline-collection-view").innerHTML = document.getElementById("collection-view").innerHTML;
+  $("tx-graph-in").value = "";
+};
+
+$("btn-pipeline-scenario2").onclick = async () => {
+  const r = await fetch("/api/collect/scenario2", { method: "POST", credentials: "same-origin" });
+  const j = await r.json();
+  renderCollectionView(j.bundle);
+  $("pipeline-collection-view").innerHTML = document.getElementById("collection-view").innerHTML;
+  $("tx-graph-in").value = "";
 };
 
 $("btn-pipeline-clear").onclick = async () => {
@@ -426,6 +499,7 @@ $("btn-pipeline-clear").onclick = async () => {
   updateCollectionUI(j.bundle);
   $("pipeline-collection-view").innerHTML = "";
   $("pipeline-result").hidden = true;
+  $("tx-graph-in").value = "";
 };
 
 $("btn-pipeline-run").onclick = async () => {
@@ -447,6 +521,9 @@ $("btn-pipeline-run").onclick = async () => {
     if (graph) {
       GraphView.setSlot({ svgId: "pipeline-svg", editPanelId: "pipeline-edit-panel", issuesId: "pipeline-graph-issues" });
       GraphView.load(graph, issues);
+    }
+    if (j.last_blueprint) {
+      $("tx-graph-in").value = JSON.stringify(j.last_blueprint, null, 2);
     }
     if (computeData) renderComputeResult(computeData, null, $("pipeline-compute-result"));
     $("pipeline-result").hidden = false;

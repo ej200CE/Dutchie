@@ -42,6 +42,7 @@ WEB = PKG / "web"
 UPLOAD_ROOT = HACKATHON_DIR / "var" / "uploads"
 SCENARIO_CACHE_FILE = HACKATHON_DIR / "var" / "scenario_cache.json"
 STORY1_DIR = REPO_ROOT / "Story" / "1"
+STORY2_DIR = REPO_ROOT / "Story" / "2"
 
 templates = Jinja2Templates(directory=str(WEB / "templates"))
 
@@ -191,6 +192,10 @@ async def get_collected_file(item_id: str, request: Request):
 @app.post("/api/collect/scenario1")
 async def collect_scenario1(request: Request) -> JSONResponse:
     sid, s = _get_session(request, None)
+    s.bundle.items.clear()
+    s.last_evidence = None
+    s.last_blueprint = None
+    s.last_graph = None
     svc = DataCollectionService(UPLOAD_ROOT)
     for fname, mime in [
         ("selfe_of_three1_with_exif.jpg", "image/jpeg"),
@@ -221,6 +226,8 @@ async def scenario1_ingest(request: Request) -> JSONResponse:
             svc.add_upload(s.bundle, fname, path.read_bytes(), mime)
     evidence = await DataIngestionService().aingest(s.bundle)
     s.last_evidence = evidence
+    s.last_blueprint = None
+    s.last_graph = None
     app.state.scenario_cache["1_evidence"] = evidence.model_dump(mode="json")
     _save_scenario_cache(app.state.scenario_cache)
     return _set_cookie(
@@ -238,6 +245,65 @@ async def scenario1_evidence(request: Request) -> JSONResponse:
     cached = app.state.scenario_cache.get("1_evidence")
     if cached is None:
         return JSONResponse({"error": "No scenario 1 evidence cached — run it first"}, status_code=404)
+    return JSONResponse(cached)
+
+
+_STORY2_FILES = [
+    ("photo-tabel2_with_exif.jpg", "image/jpeg"),
+    ("receipt2_with_exif.jpg", "image/jpeg"),
+    ("table-selfie2_with_exif.jpg", "image/jpeg"),
+    ("transaction2_with_exif.jpg", "image/jpeg"),
+]
+
+
+@app.post("/api/collect/scenario2")
+async def collect_scenario2(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    s.bundle.items.clear()
+    s.last_evidence = None
+    s.last_blueprint = None
+    s.last_graph = None
+    svc = DataCollectionService(UPLOAD_ROOT)
+    for fname, mime in _STORY2_FILES:
+        path = STORY2_DIR / fname
+        if path.exists():
+            svc.add_upload(s.bundle, fname, path.read_bytes(), mime)
+    return _set_cookie(
+        JSONResponse({"session_id": sid, "bundle": s.bundle.model_dump(mode="json")}),
+        sid,
+    )
+
+
+@app.post("/api/scenario2/ingest")
+async def scenario2_ingest(request: Request) -> JSONResponse:
+    sid, s = _get_session(request, None)
+    svc = DataCollectionService(UPLOAD_ROOT)
+    s.bundle.items.clear()
+    for fname, mime in _STORY2_FILES:
+        path = STORY2_DIR / fname
+        if path.exists():
+            svc.add_upload(s.bundle, fname, path.read_bytes(), mime)
+    evidence = await DataIngestionService().aingest(s.bundle)
+    s.last_evidence = evidence
+    s.last_blueprint = None
+    s.last_graph = None
+    app.state.scenario_cache["2_evidence"] = evidence.model_dump(mode="json")
+    _save_scenario_cache(app.state.scenario_cache)
+    return _set_cookie(
+        JSONResponse({
+            "session_id": sid,
+            "bundle": s.bundle.model_dump(mode="json"),
+            "evidence": app.state.scenario_cache["2_evidence"],
+        }),
+        sid,
+    )
+
+
+@app.get("/api/scenario2/evidence")
+async def scenario2_evidence(request: Request) -> JSONResponse:
+    cached = app.state.scenario_cache.get("2_evidence")
+    if cached is None:
+        return JSONResponse({"error": "No scenario 2 evidence cached — run it first"}, status_code=404)
     return JSONResponse(cached)
 
 
@@ -295,6 +361,8 @@ async def dev_ingest(request: Request, body: DevIngestBody) -> JSONResponse:
     bundle = body.collected if body.collected is not None else s.bundle
     ingest = await DataIngestionService().aingest(bundle)
     s.last_evidence = ingest
+    s.last_blueprint = None   # new evidence invalidates old blueprint
+    s.last_graph = None       # and old graph
     return _set_cookie(
         JSONResponse({"session_id": sid, "evidence": ingest.model_dump(mode="json")}),
         sid,
@@ -308,7 +376,11 @@ class DevAggregateBody(BaseModel):
 @app.post("/api/dev/aggregate")
 async def dev_aggregate(request: Request, body: DevAggregateBody) -> JSONResponse:
     sid, s = _get_session(request, None)
-    ev = body.evidence if body.evidence is not None else s.last_evidence
+    if body.evidence is not None:
+        ev = body.evidence
+        s.last_evidence = ev          # keep session in sync with whatever was aggregated
+    else:
+        ev = s.last_evidence
     if ev is None:
         return _set_cookie(
             JSONResponse(
@@ -333,10 +405,14 @@ class DevGraphBody(BaseModel):
 async def dev_graph(request: Request, body: DevGraphBody) -> JSONResponse:
     sid, s = _get_session(request, None)
     bp = body.blueprint if body.blueprint is not None else s.last_blueprint
+    if bp is None and s.last_evidence is not None:
+        # Auto-aggregate: user skipped the Aggregation tab but evidence is available
+        bp = EvidenceAggregationService().aggregate(s.last_evidence)
+        s.last_blueprint = bp
     if bp is None:
         return _set_cookie(
             JSONResponse(
-                {"error": "No blueprint: paste JSON or run Aggregate first"},
+                {"error": "No blueprint or evidence in session — run Ingest (tab 2) first"},
                 status_code=400,
             ),
             sid,

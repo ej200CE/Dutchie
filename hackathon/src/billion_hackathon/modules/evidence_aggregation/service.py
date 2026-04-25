@@ -59,6 +59,217 @@ def _context_key(ev: EvidenceItem) -> tuple | None:
     return None
 
 
+def _norm_venue_key(ctx: dict) -> str | None:
+    v = ctx.get("venue")
+    if not v:
+        return None
+    s = str(v).strip().lower()
+    return s or None
+
+
+def _is_people_centric_for_merge(ev: EvidenceItem) -> bool:
+    it = (ev.extra or {}).get("image_type")
+    if it == "people_photo":
+        return True
+    if ev.kind == "presence_hint" and (
+        ev.participant_person_ids
+        or (ev.extra or {}).get("persons")
+    ):
+        return True
+    return False
+
+
+def _person_id_list_ordered(ev: EvidenceItem) -> list[str]:
+    ppl = (ev.extra or {}).get("persons") or []
+    return [str(p["person_id"]) for p in ppl if p.get("person_id")]
+
+
+def _all_reference_person_ids(bundle: EvidenceBundle) -> set[str]:
+    s: set[str] = set()
+    for ev in bundle.items:
+        for p in (ev.extra or {}).get("persons") or []:
+            if p.get("person_id"):
+                s.add(str(p["person_id"]))
+        s.update(str(x) for x in (ev.participant_person_ids or []))
+        if ev.payer_person_id:
+            s.add(str(ev.payer_person_id))
+    return s
+
+
+def _find_cross_image_person_pairs(bundle: EvidenceBundle) -> list[tuple[str, str]]:
+    """(id_a, id_b) to merge: same N people, same venue label, list-order alignment."""
+    by_src: dict[str, EvidenceItem] = {}
+    for ev in bundle.items:
+        sid = (ev.source_item_ids or [None])[0]
+        if not sid or sid in by_src:
+            continue
+        if not _is_people_centric_for_merge(ev):
+            continue
+        if len(_person_id_list_ordered(ev)) < 2:
+            continue
+        by_src[sid] = ev
+    if len(by_src) < 2:
+        return []
+    per_src: dict[str, list[str]] = {s: _person_id_list_ordered(v) for s, v in by_src.items()}
+    sids = list(per_src.keys())
+    pairs: list[tuple[str, str]] = []
+    for i in range(len(sids)):
+        for j in range(i + 1, len(sids)):
+            a, b = sids[i], sids[j]
+            p1, p2 = per_src[a], per_src[b]
+            if len(p1) != len(p2) or not p1 or not p2:
+                continue
+            if set(p1) & set(p2):
+                continue
+            ev1, ev2 = by_src[a], by_src[b]
+            c1, c2 = (ev1.extra or {}).get("context") or {}, (ev2.extra or {}).get("context") or {}
+            v1, v2 = _norm_venue_key(c1), _norm_venue_key(c2)
+            if not v1 or v1 != v2:
+                continue
+            n = len(p1)
+            if n < 2 or n > 10:
+                continue
+            for u, w in zip(p1, p2):
+                if u != w:
+                    pairs.append((u, w))
+    return pairs
+
+
+def _person_id_merge_map(bundle: EvidenceBundle) -> dict[str, str]:
+    pairs = _find_cross_image_person_pairs(bundle)
+    ref = _all_reference_person_ids(bundle)
+    if not pairs:
+        return {x: x for x in ref}
+    universe = set(ref) | {x for t in pairs for x in t}
+    return _uf_project_to_canonical(universe, pairs)
+
+
+def _remap_evidence_person_ids(
+    bundle: EvidenceBundle, merge_map: dict[str, str]
+) -> EvidenceBundle:
+    if not any(merge_map.get(p, p) != p for p in merge_map):
+        return bundle
+
+    def m(x: str | None) -> str | None:
+        if x is None:
+            return None
+        return merge_map.get(x, x)
+
+    new_items: list[EvidenceItem] = []
+    for ev in bundle.items:
+        ex = {**(ev.extra or {})}
+        ppl2: list[dict] = []
+        for p in ex.get("persons") or []:
+            row = {**p}
+            if row.get("person_id"):
+                row["person_id"] = m(str(row["person_id"]))
+            ppl2.append(row)
+        ex["persons"] = ppl2
+        new_items.append(
+            ev.model_copy(
+                update={
+                    "payer_person_id": m(ev.payer_person_id),
+                    "participant_person_ids": [m(x) for x in (ev.participant_person_ids or [])],
+                    "extra": ex,
+                },
+            )
+        )
+    return bundle.model_copy(update={"items": new_items})
+
+
+def _uf_project_to_canonical(ids: set[str], pairs: list[tuple[str, str]]) -> dict[str, str]:
+    """For each id in the universe, return representative (min in UF component)."""
+    parent: dict[str, str] = {x: x for x in ids}
+    for a, b in pairs:
+        parent.setdefault(a, a)
+        parent.setdefault(b, b)
+
+    def p(x: str) -> str:
+        if parent.get(x, x) != x:
+            parent[x] = p(parent[x])
+        return parent.get(x, x)
+
+    def u(a: str, b: str) -> None:
+        ra, rb = p(a), p(b)
+        if ra == rb:
+            return
+        if ra < rb:
+            parent[rb] = ra
+        else:
+            parent[ra] = rb
+
+    for a, b in pairs:
+        u(a, b)
+    for x in set(ids):
+        parent.setdefault(x, x)
+    return {x: p(x) for x in set(ids) | set(parent)}
+
+
+def _merge_cross_file_same_headcount_people(
+    persons: dict[str, str],
+    cash_flows: list[dict[str, Any]],
+    contributions: dict[tuple[str, str], float],
+    context_payers: dict[tuple, tuple[str, int]],
+    context_presence: dict[tuple, set[str]],
+    bundle: EvidenceBundle,
+) -> None:
+    """Merge the same people described twice (different photos) into one id each.
+
+    Ingestion runs one image at a time, so unnamed groups often get unique appearance
+    slugs. When two files list the same N people for the same venue, pair them
+    in list order (left-to-right) and map to a single representative id.
+    """
+    pairs = _find_cross_image_person_pairs(bundle)
+    if not pairs:
+        return
+
+    universe: set[str] = set(persons) | {x for t in pairs for x in t}
+    canon: dict[str, str] = _uf_project_to_canonical(universe, pairs)
+
+    def ren(pid: str) -> str:
+        return canon.get(pid, pid)
+
+    new_persons: dict[str, str] = {}
+    for old, disp in persons.items():
+        np = ren(str(old))
+        if np not in new_persons or len(disp) > len(new_persons.get(np, "")):
+            new_persons[np] = disp
+    persons.clear()
+    persons.update(new_persons)
+
+    new_c: dict[tuple[str, str], float] = {}
+    for (pi, g), v in list(contributions.items()):
+        npi = ren(str(pi))
+        new_c[(npi, g)] = v
+    contributions.clear()
+    contributions.update(new_c)
+
+    for cf in cash_flows:
+        if "from_id" in cf and cf.get("from_id") is not None:
+            cf["from_id"] = ren(str(cf["from_id"]))
+        t = cf.get("to_id")
+        if t is not None and cf.get("target") == "person":
+            cf["to_id"] = ren(str(t))
+        to_g = cf.get("to_id")
+        fr = cf.get("from_id")
+        if cf.get("target") == "good" and fr is not None and to_g is not None:
+            cf["edge_id"] = f"cf-{to_g}-{fr}"
+    for ck in list(context_payers):
+        p0, a = context_payers[ck]
+        context_payers[ck] = (ren(str(p0)), a)
+    for _ck, s in list(context_presence.items()):
+        old = set(s)
+        s.clear()
+        s.update(ren(str(pid)) for pid in old)
+
+    log.info(
+        "person merge: %d pair edges, %d people after",
+        len(pairs),
+        len(persons),
+    )
+
+
+
 def _collect_persons(ev: EvidenceItem, persons: dict[str, str]) -> None:
     """Add all persons from this item into the ordered persons dict."""
     # Rich descriptors from LLM ingestor take priority for display_name
@@ -211,6 +422,10 @@ def _aggregate_rules(bundle: EvidenceBundle) -> GraphBlueprint:
                     if (pid, good_id) not in contributions:
                         contributions[(pid, good_id)] = 1.0
 
+    _merge_cross_file_same_headcount_people(
+        persons, cash_flows, contributions, context_payers, context_presence, bundle
+    )
+
     # Build operations: persons → goods → cash_flows → contributions
     ops: list[GraphOperation] = []
     seen_persons: set[str] = set()
@@ -346,6 +561,10 @@ class EvidenceAggregationService:
         self._client = get_llm_client()
 
     def aggregate(self, bundle: EvidenceBundle) -> GraphBlueprint:
+        mmap = _person_id_merge_map(bundle)
+        if any(mmap.get(p, p) != p for p in mmap):
+            log.info("cross-image person remapping before aggregate: %d ids in map", len(mmap))
+            bundle = _remap_evidence_person_ids(bundle, mmap)
         if not isinstance(self._client, StubLLMClient):
             try:
                 return _aggregate_with_llm(bundle, self._client)

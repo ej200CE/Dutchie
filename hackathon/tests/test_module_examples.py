@@ -8,7 +8,10 @@ import unittest
 from pathlib import Path
 
 from billion_hackathon.contracts.collected import CollectedBundle
-from billion_hackathon.contracts.evidence import EvidenceBundle
+from billion_hackathon.contracts.evidence import EvidenceBundle, EvidenceItem
+from billion_hackathon.modules.data_ingestion.consolidate_receipt_lines import (
+    consolidate_receipt_lines_for_group_bill,
+)
 from billion_hackathon.contracts.graph_blueprint import GraphBlueprint
 from billion_hackathon.modules.computation.engine import compute
 from billion_hackathon.modules.data_collection.service import DataCollectionService
@@ -19,6 +22,7 @@ from billion_hackathon.modules.graph_builder.service import GraphBuilderService
 from billion_hackathon.modules.llm.client import ChatMessage, StubLLMClient
 
 STORY1 = Path("/home/klift/bunq-hackathon-7/billion_idea/Story/1")
+STORY2 = Path("/home/klift/bunq-hackathon-7/billion_idea/Story/2")
 
 PKG = Path(__file__).resolve().parent.parent / "src" / "billion_hackathon"
 
@@ -58,6 +62,22 @@ class ModuleExampleTests(unittest.TestCase):
             _read("evidence_aggregation", "story1_expected_blueprint.json")
         )
         self.assertEqual(got.model_dump(), expected.model_dump())
+
+    def test_evidence_aggregation_story2_rules(self):
+        """Rule-based aggregation of Story/2: four people, one shared meal, one payer."""
+        from billion_hackathon.modules.evidence_aggregation.service import _aggregate_rules
+        ev = EvidenceBundle.model_validate(_read("evidence_aggregation", "story2_artifact_evidence.json"))
+        got = _aggregate_rules(ev)
+        person_ids = {
+            n["id"]
+            for o in got.operations
+            if o.op == "add_node" and o.node and o.node.get("kind") == "person"
+            for n in [o.node]
+        }
+        self.assertEqual(person_ids, {"e_evans", "group_pos_2", "group_pos_3", "group_pos_4"})
+        goods = [o for o in got.operations if o.op == "add_node" and o.node and o.node.get("kind") == "good"]
+        self.assertEqual(len(goods), 1)
+        self.assertEqual(goods[0].node.get("stated_total_cents"), 22090)
 
     def test_graph_builder_snapshot(self):
         bp = GraphBlueprint.model_validate(_read("graph_builder", "artifact_blueprint.json"))
@@ -129,7 +149,7 @@ class ModuleExampleTests(unittest.TestCase):
                 self.assertEqual(item.gps_lon, exp["gps_lon"], f"{item.original_filename}: gps_lon")
 
     def test_data_ingestion_story1_stub(self):
-        """Stub ingestor produces presence_hint items from Story/1 EXIF metadata."""
+        """With LLM stub, Story/1 file set maps to story-aligned gold evidence (Three friends, 3x beer)."""
         if not STORY1.exists():
             self.skipTest("Story/1 fixtures not available")
 
@@ -138,6 +158,53 @@ class ModuleExampleTests(unittest.TestCase):
         got = DataIngestionService().ingest(bundle)
         expected = EvidenceBundle.model_validate(_read("data_ingestion", "story1_expected_evidence.json"))
         self.assertEqual(got.model_dump(), expected.model_dump())
+
+    def test_data_ingestion_story2_stub(self):
+        """With LLM stub, Story/2 file set maps to story-aligned gold evidence (Four friends, one bill)."""
+        if not STORY2.exists():
+            self.skipTest("Story/2 fixtures not available")
+
+        raw = _read("data_ingestion", "story2_artifact_bundle.json")
+        bundle = CollectedBundle.model_validate(raw)
+        got = DataIngestionService().ingest(bundle)
+        expected = EvidenceBundle.model_validate(_read("data_ingestion", "story2_expected_evidence.json"))
+        self.assertEqual(got.model_dump(), expected.model_dump())
+
+    def test_consolidate_receipt_lines_merges_exploded_menu(self):
+        """Many receipt_line rows from one image collapse to one (Scenario 2 menu explosion)."""
+        spend = EvidenceItem(
+            id="sp1",
+            source_item_ids=[],
+            kind="spend_hint",
+            amount_cents=10_000,
+            label="Bistro",
+            payer_person_id="a",
+            participant_person_ids=["a", "b", "c", "d"],
+            confidence=0.9,
+            extra={"good_id": "dinner_1"},
+        )
+        src = "receipt-img-1"
+        rlines = [
+            EvidenceItem(
+                id=f"rl{i}",
+                source_item_ids=[src],
+                kind="receipt_line",
+                amount_cents=amt,
+                label=f"line{i}",
+                confidence=0.8,
+            )
+            for i, amt in enumerate([10_000, 200, 300], start=1)
+        ]
+        b = EvidenceBundle(
+            event_id="e1",
+            items=[spend, *rlines],
+        )
+        out = consolidate_receipt_lines_for_group_bill(b)
+        rls = [x for x in out.items if x.kind == "receipt_line"]
+        self.assertEqual(len(rls), 1)
+        self.assertEqual(rls[0].amount_cents, 10_000)
+        self.assertEqual((rls[0].extra or {}).get("good_id"), "dinner_1")
+        self.assertEqual(set(rls[0].participant_person_ids), {"a", "b", "c", "d"})
 
     def test_end_to_end_chain(self):
         bundle = CollectedBundle.model_validate(_read("data_collection", "artifact_bundle.json"))

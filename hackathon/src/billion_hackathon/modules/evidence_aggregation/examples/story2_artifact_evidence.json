@@ -1,0 +1,186 @@
+{
+  "event_id": "evt_bistro_story2",
+  "items": [
+    {
+      "id": "ev-s2-table-0",
+      "source_item_ids": ["img-table"],
+      "kind": "presence_hint",
+      "amount_cents": null,
+      "currency": "EUR",
+      "label": null,
+      "payer_person_id": null,
+      "participant_person_ids": ["e_evans", "group_pos_2", "group_pos_3", "group_pos_4"],
+      "confidence": 0.88,
+      "raw_excerpt": "Four people at a restaurant table, food and drinks visible",
+      "extra": {
+        "image_type": "people_photo",
+        "context": {
+          "venue": "Bistro De Haven",
+          "venue_type": "restaurant",
+          "datetime_visible": "2026-04-25T19:30:00",
+          "location_hint": null,
+          "total_amount_cents": 22090,
+          "currency": "EUR"
+        },
+        "persons": [
+          {
+            "person_id": "e_evans",
+            "display_name": "E. Evans",
+            "description": "Seated, talking with the group",
+            "seat_or_position": "centre",
+            "confidence": 0.9
+          },
+          {
+            "person_id": "group_pos_2",
+            "display_name": null,
+            "description": "Adult at table, dark top",
+            "seat_or_position": "left of centre",
+            "confidence": 0.7
+          },
+          {
+            "person_id": "group_pos_3",
+            "display_name": null,
+            "description": "Adult at table, light top",
+            "seat_or_position": "right of centre",
+            "confidence": 0.7
+          },
+          {
+            "person_id": "group_pos_4",
+            "display_name": null,
+            "description": "Adult at end of table",
+            "seat_or_position": "far end",
+            "confidence": 0.7
+          }
+        ],
+        "goods": []
+      }
+    },
+    {
+      "id": "ev-s2-receipt-0",
+      "source_item_ids": ["img-receipt"],
+      "kind": "receipt_line",
+      "amount_cents": 22090,
+      "currency": "EUR",
+      "label": "Dining out (total)",
+      "payer_person_id": null,
+      "participant_person_ids": [],
+      "confidence": 0.9,
+      "raw_excerpt": "Receipt: Bistro De Haven, total for dinner and drinks",
+      "extra": {
+        "image_type": "receipt",
+        "context": {
+          "venue": "Bistro De Haven",
+          "venue_type": "restaurant",
+          "datetime_visible": "2026-04-25T20:00:00",
+          "location_hint": null,
+          "total_amount_cents": 22090,
+          "currency": "EUR"
+        },
+        "persons": [],
+        "goods": [
+          {
+            "good_id": "dining_bistro_de_haven",
+            "label": "Dining out at Bistro De Haven",
+            "category": "food",
+            "quantity": 1,
+            "unit_price_cents": null,
+            "total_cents": 22090,
+            "description": "Shared meal: plates and drinks",
+            "visual_cues": null
+          }
+        ],
+        "good_id": "dining_bistro_de_haven",
+        "notes": "One total for the group"
+      }
+    },
+    {
+      "id": "ev-s2-selfie-0",
+      "source_item_ids": ["img-selfie"],
+      "kind": "presence_hint",
+      "amount_cents": null,
+      "currency": "EUR",
+      "label": null,
+      "payer_person_id": null,
+      "participant_person_ids": ["e_evans", "group_pos_2", "group_pos_3", "group_pos_4"],
+      "confidence": 0.88,
+      "raw_excerpt": "Group selfie: four people after dinner (same group as at the table)",
+      "extra": {
+        "image_type": "people_photo",
+        "context": {
+          "venue": "Bistro De Haven",
+          "venue_type": "restaurant",
+          "datetime_visible": "2026-04-25T20:10:00",
+          "location_hint": null,
+          "total_amount_cents": 22090,
+          "currency": "EUR"
+        },
+        "persons": [
+          {
+            "person_id": "e_evans",
+            "display_name": "E. Evans",
+            "description": "Holding the phone, smiling",
+            "seat_or_position": null,
+            "confidence": 0.9
+          },
+          {
+            "person_id": "group_pos_2",
+            "display_name": null,
+            "description": "Same as table photo, dark top",
+            "seat_or_position": "left in frame",
+            "confidence": 0.75
+          },
+          {
+            "person_id": "group_pos_3",
+            "display_name": null,
+            "description": "Same as table, light top",
+            "seat_or_position": "centre",
+            "confidence": 0.75
+          },
+          {
+            "person_id": "group_pos_4",
+            "display_name": null,
+            "description": "End of the row in selfie",
+            "seat_or_position": "right in frame",
+            "confidence": 0.75
+          }
+        ],
+        "goods": []
+      }
+    },
+    {
+      "id": "ev-s2-tx-0",
+      "source_item_ids": ["img-transaction"],
+      "kind": "spend_hint",
+      "amount_cents": 22090,
+      "currency": "EUR",
+      "label": "Bistro De Haven",
+      "payer_person_id": "e_evans",
+      "participant_person_ids": ["e_evans", "group_pos_2", "group_pos_3", "group_pos_4"],
+      "confidence": 0.9,
+      "raw_excerpt": "Bank/payment: E. Evans paid the restaurant bill in full for the group",
+      "extra": {
+        "image_type": "transaction_screenshot",
+        "context": {
+          "venue": "Bistro De Haven",
+          "venue_type": "restaurant",
+          "datetime_visible": "2026-04-25T20:12:00",
+          "location_hint": null,
+          "total_amount_cents": 22090,
+          "currency": "EUR"
+        },
+        "persons": [
+          {
+            "person_id": "e_evans",
+            "display_name": "E. Evans",
+            "description": "Payer (account / card name)",
+            "seat_or_position": null,
+            "confidence": 0.95
+          }
+        ],
+        "goods": [],
+        "good_id": "dining_bistro_de_haven",
+        "notes": "One person paid the full shared bill"
+      }
+    }
+  ]
+}

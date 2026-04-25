@@ -70,7 +70,7 @@ class ImageIngestor:
             ),
         ]
 
-        response = self._client.complete(messages, max_tokens=2048)
+        response = self._client.complete(messages, max_tokens=4096)
 
         if response.model == "stub":
             log.info("   → stub (no LLM key)")

@@ -67,9 +67,23 @@ Merge when:
     venue+datetime as persons in a selfie / presence_hint — treat that payer as
     one of those people; pick the most plausible match or create a single entry
     that represents "the payer, who was also present"
-  • extra.persons[].description describes the same appearance across two images
+  • extra.persons[].description or seat order describes the same appearance across two images
+  • Two group photos of the same venue, same size group (e.g. 4 at the table and 4 in a selfie
+    after dinner), no overlapping person_id in the raw evidence — that is the SAME four people
+    once per photo; you MUST output FOUR people total, not eight. Pair them in order
+    (left-to-right) if no names align.
+  • Ingestion may add `inferred_photographer_1` (someone not in the frame) for third-person
+    shots. Do not merge that id with a visible `group_pos_k` unless evidence (names, count,
+    captions) says they are the same person. Prefer keeping the photographer as a separate
+    node with low weight or drop the edge if the group size is already satisfied.
+  • If a **named payer** (e.g. e_evans) appears on spend/receipt and **separate** `group_pos_1`..N
+    appear in people_photo for the same dinner, and N is the friend count (3 or 4), you have
+    **double-counting** — the payer is one of those people. Output **exactly N** person nodes: map
+    the name to one of the slots and **drop** the extra duplicate id, or merge into one id list.
 
 Use ONE person_id for each physical person. Prefer a real name if available.
+When two images are clearly the same party at the same bill, the headcount in your output
+should match a single dinner — not the sum of headcounts from every photo.
 Do NOT produce separate nodes for the same individual under different slugs.
 
 ────────────────────────────────────────────
@@ -95,6 +109,19 @@ app fee, or bank charge. When a receipt for the same amount exists:
   • The transaction IS the payment for that receipt — merge them (see Step 1).
   • The payer named on the transaction paid on behalf of the group.
   • Do NOT conclude the payment is a subscription or personal expense.
+
+────────────────────────────────────────────
+PRESENCE HINTS AND GROUP CONTRIBUTIONS
+────────────────────────────────────────────
+When a presence_hint lists people at the same occasion as a spend:
+  • ALL persons in presence_hints should receive contribution edges to every good
+    from that occasion, EVEN IF venue/datetime context is missing.
+  • If there is only ONE receipt/spend in the entire event, presence_hints always
+    apply to that expense — match them by the fact that it's the same event.
+  • The PAYER of any good is always a contributor to that good (value=1.0), even
+    if they are not listed in participant_person_ids.
+  • Merge the payer's person_id with selfie persons when there is strong evidence
+    they were present (same event, same payment).
 
 ────────────────────────────────────────────
 RESPONSE FORMAT — VALID JSON ONLY
@@ -141,6 +168,14 @@ HARD RULES
 - Do NOT invent amounts or payers not present in the evidence.
 - ONE good per real-world purchase. Merging is always safer than splitting.
 - ONE person per physical individual. Prefer the real name when visible.
+- Every payer MUST have a contribution edge (value=1.0) to the good they paid for.
+- When ALL persons at an event shared an expense equally, give each of them a
+  contribution edge (value=1.0) — do NOT leave anyone out just because they were
+  not explicitly listed as participant_person_ids on the receipt item.
+- If the evidence has multiple people_photo / presence items from the same venue, merge
+  to one node per person before you count: persons[] should not list the same person twice
+  under two appearance-based ids (e.g. adult_male_… from one file and young_adult_… from
+  another) when they are clearly the same gathering.
 """
 
 AGGREGATION_USER_TMPL = """\

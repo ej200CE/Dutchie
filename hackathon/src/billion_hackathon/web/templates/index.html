@@ -43,6 +43,7 @@
       <div class="coll-actions">
         <button type="button" id="btn-session-refresh">Refresh</button>
         <button type="button" id="btn-load-scenario1">Load scenario 1</button>
+        <button type="button" id="btn-load-scenario2">Load scenario 2</button>
         <button type="button" id="btn-load-weekend-coll">Load weekend example</button>
         <button type="button" id="btn-clear-coll" class="btn-danger">Clear all</button>
       </div>
@@ -65,6 +66,7 @@
         <button type="button" id="btn-ingest-load-session">Use session <code>collected</code> as input</button>
         <button type="button" id="btn-ingest-run">Run ingest</button>
         <button type="button" id="btn-ingest-load-scenario1">Load last S1 evidence</button>
+        <button type="button" id="btn-ingest-load-scenario2">Load last S2 evidence</button>
       </p>
       <label class="lbl">Input JSON (<code>{"collected": { ... } }</code> or leave empty for session)</label>
       <textarea id="tx-ingest-in" class="json" rows="8" spellcheck="false" placeholder='{ "collected": null }'></textarea>
@@ -89,12 +91,13 @@
     <!-- 4 Graph -->
     <section id="panel-graph" class="tab-panel" role="tabpanel" hidden>
       <h2>graph_builder</h2>
-      <p class="hint"><strong>Build graph</strong> runs the blueprint from session (or paste one below). <strong>Load saved graph</strong> restores a previously built graph. Click nodes/edges to edit; inconsistencies highlighted in red.</p>
+      <p class="hint"><strong>Build graph</strong> uses the <code>last_blueprint</code> in your session if the field below is empty. If you paste a blueprint (or a full aggregate JSON with a <code>blueprint</code> field), that value overrides the session. The field is updated when you <strong>Run aggregate</strong> (tab 3) or the full pipeline. <strong>Load saved graph</strong> restores the last built graph. Click nodes/edges to edit; inconsistencies highlighted in red.</p>
 
       <div class="graph-actions">
         <button type="button" id="btn-graph-run">Build graph</button>
         <button type="button" id="btn-graph-load-session-graph">Load saved graph</button>
       </div>
+      <div id="graph-error" class="graph-error" hidden></div>
 
       <details class="json-details">
         <summary class="lbl">Blueprint JSON input</summary>
@@ -152,6 +155,7 @@
 
       <div class="pipeline-load-row">
         <button type="button" id="btn-pipeline-scenario1">Load scenario 1</button>
+        <button type="button" id="btn-pipeline-scenario2">Load scenario 2</button>
         <button type="button" id="btn-pipeline-clear" class="btn-danger">Clear</button>
       </div>
 
