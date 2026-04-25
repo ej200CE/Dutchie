@@ -1,3 +1,65 @@
+/* ── Graph edit panel (content injected by graph-view.js) ───────────── */
+
+.mobile-graph-edit {
+  background: #F5F7FA;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-height: 48px;
+  font-size: 13px;
+  color: #1A202C;
+}
+
+.mobile-graph-edit label {
+  display: block;
+  font-size: 11px;
+  color: #4A5568;
+  margin-bottom: 2px;
+  margin-top: 8px;
+}
+
+.mobile-graph-edit label:first-child {
+  margin-top: 0;
+}
+
+.mobile-graph-edit input {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #1A202C;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.mobile-graph-edit input:focus {
+  border-color: #159A97;
+}
+
+.mobile-graph-edit button {
+  margin-top: 8px;
+  margin-right: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.mobile-graph-edit button[type="submit"],
+.mobile-graph-edit button.save {
+  background: #F46E5D;
+  color: #FFFFFF;
+}
+
+.mobile-graph-edit button.delete {
+  background: #E2E8F0;
+  color: #E53E3E;
+}
+
 /* ── Screen transitions ─────────────────────────────────────────────── */
 
 .screen {
@@ -32,7 +94,8 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: #3c3836;
+  background: #F5F7FA;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 6px;
   overflow: hidden;
@@ -53,7 +116,7 @@
 
 .thumb-label {
   font-size: 10px;
-  color: #a89984;
+  color: #A0AEC0;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -65,12 +128,12 @@
 
 .review-tab {
   position: relative;
-  color: #a89984;
+  color: #A0AEC0;
   transition: color 0.12s;
 }
 
 .review-tab.active-tab {
-  color: #ebdbb2;
+  color: #1A202C;
 }
 
 .review-tab.active-tab::after {
@@ -80,7 +143,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #fe8019;
+  background: #F46E5D;
   border-radius: 2px 2px 0 0;
 }
 
@@ -110,7 +173,7 @@
 select {
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a89984' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23A0AEC0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   padding-right: 36px;
@@ -125,4 +188,47 @@ select {
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
+}
+
+/* ── Graph edit panel typography ────────────────────────────────────── */
+
+.mobile-graph-edit h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A202C;
+  margin: 0 0 6px;
+}
+
+.mobile-graph-edit .graph-empty {
+  color: #A0AEC0;
+  font-size: 12px;
+  text-align: center;
+  padding: 6px 0;
+}
+
+.mobile-graph-edit .edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mobile-graph-edit select {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 30px 6px 10px;
+  color: #1A202C;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23A0AEC0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.mobile-graph-edit select:focus {
+  border-color: #159A97;
 }

@@ -5,22 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Split the bill</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="/static/graph-view.js"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            bg:      '#282828',
-            bg1:     '#3c3836',
-            bg2:     '#504945',
-            fg:      '#ebdbb2',
-            fg2:     '#bdae93',
-            fg3:     '#a89984',
-            accent:  '#fe8019',
-            green:   '#b8bb26',
-            red:     '#fb4934',
-            yellow:  '#fabd2f',
-            blue:    '#83a598',
+            bg:      '#FFFFFF',
+            bg1:     '#F5F7FA',
+            bg2:     '#E2E8F0',
+            fg:      '#1A202C',
+            fg2:     '#4A5568',
+            fg3:     '#A0AEC0',
+            accent:  '#F46E5D',
+            green:   '#159A97',
+            red:     '#E53E3E',
+            yellow:  '#ECC94B',
+            blue:    '#159A97',
           },
           fontFamily: { sans: ['system-ui', 'sans-serif'] },
         },
@@ -55,7 +57,7 @@
     <div id="create-error" class="hidden text-red text-sm px-1"></div>
 
     <button id="btn-create-next"
-      class="w-full bg-accent text-bg font-semibold rounded-xl py-4 text-base active:opacity-80 transition-opacity">
+      class="w-full bg-accent text-white font-semibold rounded-xl py-4 text-base active:opacity-80 transition-opacity">
       Next →
     </button>
   </section>
@@ -102,7 +104,7 @@
         <button id="btn-clear-ev" class="text-fg3 text-sm underline hidden">Clear all</button>
       </div>
       <button id="btn-analyse" disabled
-        class="w-full bg-accent text-bg font-semibold rounded-xl py-4 text-base transition-opacity disabled:opacity-40">
+        class="w-full bg-accent text-white font-semibold rounded-xl py-4 text-base transition-opacity disabled:opacity-40">
         Analyse →
       </button>
     </div>
@@ -119,44 +121,73 @@
 
   <!-- ── Screen 4: Review graph ─────────────────────────────────────── -->
   <section id="s-review" class="screen hidden flex flex-col min-h-screen">
-    <header class="p-6 pb-0 pt-safe">
-      <h2 class="text-xl font-bold text-fg">Review</h2>
-      <p class="text-fg3 text-sm mt-1">Check what we found. Tap to edit.</p>
+    <header class="px-6 pt-6 pb-0 pt-safe flex items-start justify-between gap-4">
+      <div>
+        <button class="back-btn text-fg3 text-sm mb-3 flex items-center gap-1" data-target="s-evidence">← Back</button>
+        <h2 class="text-xl font-bold text-fg">Review</h2>
+        <p class="text-fg3 text-sm mt-1">Check what we found. Tap to edit.</p>
+      </div>
+      <div class="flex bg-bg2 rounded-lg p-1 shrink-0 mt-1">
+        <button id="btn-view-list"
+          class="px-3 py-1 rounded-md text-sm font-medium text-fg3 transition-colors">List</button>
+        <button id="btn-view-graph"
+          class="px-3 py-1 rounded-md text-sm font-medium bg-bg1 text-fg transition-colors">Graph</button>
+      </div>
     </header>
 
-    <!-- Inconsistency banners -->
+    <!-- Inconsistency banners (visible in both views) -->
     <div id="review-issues" class="px-6 mt-3 flex flex-col gap-2"></div>
 
-    <!-- Tab bar -->
-    <div class="px-6 mt-4 flex gap-0 border-b border-bg2">
-      <button class="review-tab active-tab px-4 py-2 text-sm font-medium" data-pane="pane-people">People</button>
-      <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-goods">Goods</button>
-      <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-connections">Connections</button>
+    <!-- ── List view ── -->
+    <div id="review-list-view" class="hidden flex flex-col flex-1 overflow-hidden">
+      <!-- Tab bar -->
+      <div class="px-6 mt-4 flex gap-0 border-b border-bg2">
+        <button class="review-tab active-tab px-4 py-2 text-sm font-medium" data-pane="pane-people">People</button>
+        <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-goods">Goods</button>
+        <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-connections">Connections</button>
+      </div>
+
+      <!-- People pane -->
+      <div id="pane-people" class="review-pane flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
+        <div id="people-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-person"
+          class="mt-2 text-blue text-sm text-left px-1">+ Add person</button>
+      </div>
+
+      <!-- Goods pane -->
+      <div id="pane-goods" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
+        <div id="goods-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-good"
+          class="mt-2 text-blue text-sm text-left px-1">+ Add good</button>
+      </div>
+
+      <!-- Connections pane -->
+      <div id="pane-connections" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
+        <p class="text-fg3 text-xs uppercase tracking-wide mb-1">Cash flows (who paid)</p>
+        <div id="cashflow-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-cashflow" class="mt-2 text-blue text-sm text-left px-1">+ Add cash flow</button>
+
+        <p class="text-fg3 text-xs uppercase tracking-wide mt-4 mb-1">Contributions (who consumed)</p>
+        <div id="contribution-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-contribution" class="mt-2 text-blue text-sm text-left px-1">+ Add contribution</button>
+      </div>
     </div>
 
-    <!-- People pane -->
-    <div id="pane-people" class="review-pane flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
-      <div id="people-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-person"
-        class="mt-2 text-blue text-sm text-left px-1">+ Add person</button>
-    </div>
-
-    <!-- Goods pane -->
-    <div id="pane-goods" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
-      <div id="goods-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-good"
-        class="mt-2 text-blue text-sm text-left px-1">+ Add good</button>
-    </div>
-
-    <!-- Connections pane -->
-    <div id="pane-connections" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
-      <p class="text-fg3 text-xs uppercase tracking-wide mb-1">Cash flows (who paid)</p>
-      <div id="cashflow-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-cashflow" class="mt-2 text-blue text-sm text-left px-1">+ Add cash flow</button>
-
-      <p class="text-fg3 text-xs uppercase tracking-wide mt-4 mb-1">Contributions (who consumed)</p>
-      <div id="contribution-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-contribution" class="mt-2 text-blue text-sm text-left px-1">+ Add contribution</button>
+    <!-- ── Graph view ── -->
+    <div id="review-graph-view" class="flex-1 flex flex-col overflow-hidden px-4 pt-3 gap-2">
+      <div class="flex gap-2 overflow-x-auto pb-1 shrink-0">
+        <button id="btn-graph-add-person"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Person</button>
+        <button id="btn-graph-add-good"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Good</button>
+        <button id="btn-graph-add-cashflow"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Cash flow</button>
+        <button id="btn-graph-add-contribution"
+          class="shrink-0 px-3 py-1.5 bg-bg1 border border-bg2 rounded-lg text-xs font-medium text-fg2 active:bg-bg2 transition-colors whitespace-nowrap">+ Contribution</button>
+      </div>
+      <svg id="mobile-graph-svg" style="width:100%;height:48vh;display:block;"></svg>
+      <div id="mobile-graph-edit" class="mobile-graph-edit overflow-y-auto"></div>
+      <div id="mobile-graph-issues" class="flex flex-col gap-1 pb-2"></div>
     </div>
 
     <div class="px-6 pb-safe pb-6 pt-4 flex flex-col gap-3 border-t border-bg2 mt-auto">
@@ -167,7 +198,7 @@
           Re-run maths
         </button>
         <button id="btn-review-next"
-          class="flex-1 bg-accent text-bg font-semibold rounded-xl py-3 text-base active:opacity-80 transition-opacity">
+          class="flex-1 bg-accent text-white font-semibold rounded-xl py-3 text-base active:opacity-80 transition-opacity">
           Looks right →
         </button>
       </div>
@@ -197,7 +228,7 @@
 
     <div class="flex flex-col gap-3 pb-safe">
       <button id="btn-confirm-yes"
-        class="w-full bg-green text-bg font-semibold rounded-xl py-4 text-base active:opacity-80 transition-opacity">
+        class="w-full bg-green text-white font-semibold rounded-xl py-4 text-base active:opacity-80 transition-opacity">
         ✓ Looks right
       </button>
       <button id="btn-confirm-edit"
@@ -234,7 +265,7 @@
 
     <div class="flex flex-col gap-3 pt-4 pb-safe mt-auto">
       <button id="btn-share"
-        class="w-full bg-blue text-bg font-semibold rounded-xl py-4 text-base active:opacity-80 transition-opacity">
+        class="w-full bg-blue text-white font-semibold rounded-xl py-4 text-base active:opacity-80 transition-opacity">
         Share summary
       </button>
       <button id="btn-start-over"
@@ -252,7 +283,7 @@
         class="bg-bg border border-bg2 rounded-xl px-4 py-3 text-fg placeholder-fg3 focus:outline-none focus:border-blue text-base" />
       <div class="flex gap-3">
         <button class="modal-cancel flex-1 bg-bg2 text-fg rounded-xl py-3 text-sm">Cancel</button>
-        <button id="modal-person-save" class="flex-1 bg-accent text-bg font-semibold rounded-xl py-3 text-sm">Add</button>
+        <button id="modal-person-save" class="flex-1 bg-accent text-white font-semibold rounded-xl py-3 text-sm">Add</button>
       </div>
     </div>
   </div>
@@ -267,7 +298,7 @@
         class="bg-bg border border-bg2 rounded-xl px-4 py-3 text-fg placeholder-fg3 focus:outline-none focus:border-blue text-base" />
       <div class="flex gap-3">
         <button class="modal-cancel flex-1 bg-bg2 text-fg rounded-xl py-3 text-sm">Cancel</button>
-        <button id="modal-good-save" class="flex-1 bg-accent text-bg font-semibold rounded-xl py-3 text-sm">Add</button>
+        <button id="modal-good-save" class="flex-1 bg-accent text-white font-semibold rounded-xl py-3 text-sm">Add</button>
       </div>
     </div>
   </div>
@@ -291,7 +322,7 @@
       </label>
       <div class="flex gap-3">
         <button class="modal-cancel flex-1 bg-bg2 text-fg rounded-xl py-3 text-sm">Cancel</button>
-        <button id="modal-cf-save" class="flex-1 bg-accent text-bg font-semibold rounded-xl py-3 text-sm">Add</button>
+        <button id="modal-cf-save" class="flex-1 bg-accent text-white font-semibold rounded-xl py-3 text-sm">Add</button>
       </div>
     </div>
   </div>
@@ -315,7 +346,7 @@
       </label>
       <div class="flex gap-3">
         <button class="modal-cancel flex-1 bg-bg2 text-fg rounded-xl py-3 text-sm">Cancel</button>
-        <button id="modal-ct-save" class="flex-1 bg-accent text-bg font-semibold rounded-xl py-3 text-sm">Add</button>
+        <button id="modal-ct-save" class="flex-1 bg-accent text-white font-semibold rounded-xl py-3 text-sm">Add</button>
       </div>
     </div>
   </div>

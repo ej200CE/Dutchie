@@ -211,6 +211,7 @@ async function runPipeline() {
     S.confirmIdx = 0;
     renderReview(data.inconsistencies ?? []);
     show('s-review');
+    switchToGraph();
   } catch (e) {
     show('s-evidence');
     setEvError(`Analysis failed: ${e.message}`);
@@ -220,6 +221,8 @@ async function runPipeline() {
 }
 
 // ── Screen 4: Review graph ─────────────────────────────────────────────
+
+let currentIssues = [];
 
 function persons() { return (S.graph?.nodes ?? []).filter(n => n.kind === 'person'); }
 function goods()   { return (S.graph?.nodes ?? []).filter(n => n.kind === 'good'); }
@@ -232,11 +235,49 @@ function nodeLabel(id) {
 }
 
 function renderReview(inconsistencies) {
-  renderIssues(inconsistencies ?? []);
+  currentIssues = inconsistencies ?? [];
+  renderIssues(currentIssues);
   renderPeople();
   renderGoods();
   renderConnections();
 }
+
+// ── View toggle ────────────────────────────────────────────────────────
+
+GraphView.setSlot({
+  svgId: 'mobile-graph-svg',
+  editPanelId: 'mobile-graph-edit',
+  issuesId: 'mobile-graph-issues',
+});
+
+function switchToGraph() {
+  document.getElementById('review-list-view').classList.add('hidden');
+  document.getElementById('review-graph-view').classList.remove('hidden');
+  document.getElementById('btn-view-list').classList.remove('bg-bg1', 'text-fg');
+  document.getElementById('btn-view-list').classList.add('text-fg3');
+  document.getElementById('btn-view-graph').classList.remove('text-fg3');
+  document.getElementById('btn-view-graph').classList.add('bg-bg1', 'text-fg');
+  GraphView.load(S.graph, currentIssues);
+  GraphView.onchange(g => { S.graph = g; validateAndRecompute(); });
+}
+
+function switchToList() {
+  const updated = GraphView.getGraph();
+  if (updated) S.graph = updated;
+  GraphView.clearGraph();
+  document.getElementById('review-graph-view').classList.add('hidden');
+  document.getElementById('review-list-view').classList.remove('hidden');
+  document.getElementById('btn-view-graph').classList.remove('bg-bg1', 'text-fg');
+  document.getElementById('btn-view-graph').classList.add('text-fg3');
+  document.getElementById('btn-view-list').classList.remove('text-fg3');
+  document.getElementById('btn-view-list').classList.add('bg-bg1', 'text-fg');
+  renderPeople();
+  renderGoods();
+  renderConnections();
+}
+
+document.getElementById('btn-view-list').addEventListener('click', switchToList);
+document.getElementById('btn-view-graph').addEventListener('click', switchToGraph);
 
 function renderIssues(issues) {
   const el = document.getElementById('review-issues');
@@ -527,6 +568,7 @@ document.getElementById('btn-confirm-edit').addEventListener('click', () => {
   S.confirmations = {};
   S.confirmIdx = 0;
   show('s-review');
+  switchToGraph();
 });
 
 // ── Screen 6: Final bill ───────────────────────────────────────────────
