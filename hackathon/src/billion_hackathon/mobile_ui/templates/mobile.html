@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Split the bill</title>
+  <title>Dutchie</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="/static/graph-view.js"></script>
@@ -33,10 +33,28 @@
 </head>
 <body class="bg-bg text-fg min-h-full flex flex-col">
 
+  <!-- ── Screen 0: Welcome ─────────────────────────────────────────── -->
+  <section id="s-welcome" class="screen active flex flex-col min-h-screen bg-bg">
+    <div class="pt-safe flex-1 flex flex-col items-center justify-center gap-10 px-8">
+      <img src="/mobile/static/dutchie-logo.png" alt="Dutchie" class="w-56 h-56 object-contain" />
+      <div class="text-center flex flex-col gap-1">
+        <p class="text-3xl font-bold text-fg">Split the bill,</p>
+        <p class="text-3xl font-bold text-accent">not the mood.</p>
+      </div>
+    </div>
+    <div class="px-6 pb-safe pb-10">
+      <button id="btn-welcome-start"
+        class="w-full text-white font-semibold rounded-2xl py-4 text-lg active:opacity-80 transition-opacity"
+        style="background: linear-gradient(135deg, #F46E5D 0%, #159A97 100%)">
+        Get started →
+      </button>
+    </div>
+  </section>
+
   <!-- ── Screen 1: Create event ─────────────────────────────────────── -->
-  <section id="s-create" class="screen active flex flex-col min-h-screen p-6 gap-6">
+  <section id="s-create" class="screen hidden flex flex-col min-h-screen p-6 gap-6">
     <header class="pt-safe">
-      <h1 class="text-2xl font-bold text-fg">Split the bill</h1>
+      <h2 class="text-xl font-bold text-fg">New outing</h2>
       <p class="text-fg3 text-sm mt-1">Name your outing and who's coming.</p>
     </header>
 
@@ -66,8 +84,13 @@
   <section id="s-evidence" class="screen hidden flex flex-col min-h-screen">
     <header class="p-6 pb-4 pt-safe">
       <button class="back-btn text-fg3 text-sm mb-3 flex items-center gap-1" data-target="s-create">← Back</button>
-      <h2 id="ev-title" class="text-xl font-bold text-fg">Add evidence</h2>
-      <p class="text-fg3 text-sm mt-1">Photos of receipts, group, bank screenshots, or just type.</p>
+      <div class="flex items-center gap-3">
+        <img src="/mobile/static/dutchie-logo.png" alt="Dutchie" class="w-8 h-8 object-contain" />
+        <div>
+          <h2 id="ev-title" class="text-xl font-bold text-fg">Add evidence</h2>
+          <p class="text-fg3 text-sm">Photos of receipts, group, bank screenshots, or just type.</p>
+        </div>
+      </div>
     </header>
 
     <div class="flex flex-col gap-4 px-6 flex-1">
@@ -124,7 +147,10 @@
     <header class="px-6 pt-6 pb-0 pt-safe flex items-start justify-between gap-4">
       <div>
         <button class="back-btn text-fg3 text-sm mb-3 flex items-center gap-1" data-target="s-evidence">← Back</button>
-        <h2 class="text-xl font-bold text-fg">Review</h2>
+        <div class="flex items-center gap-2">
+          <img src="/mobile/static/dutchie-logo.png" alt="Dutchie" class="w-7 h-7 object-contain" />
+          <h2 class="text-xl font-bold text-fg">Review</h2>
+        </div>
         <p class="text-fg3 text-sm mt-1">Check what we found. Tap to edit.</p>
       </div>
       <div class="flex bg-bg2 rounded-lg p-1 shrink-0 mt-1">

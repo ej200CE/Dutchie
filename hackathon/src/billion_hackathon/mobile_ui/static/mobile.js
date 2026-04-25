@@ -68,6 +68,10 @@ async function apiFetch(method, path, body) {
   return res.json();
 }
 
+// ── Screen 0: Welcome ─────────────────────────────────────────────────
+
+document.getElementById('btn-welcome-start').addEventListener('click', () => show('s-create'));
+
 // ── Screen 1: Create event ─────────────────────────────────────────────
 
 document.getElementById('btn-create-next').addEventListener('click', () => {
