@@ -8,23 +8,23 @@
  */
 
 const GraphView = (() => {
-  /* ── palette (Gruvbox dark) ─────────────────────────── */
+  /* ── palette (light, brand colours) ────────────────── */
   const C = {
-    personFill:  "#1d3a47",
-    personStroke:"#83a598",
-    goodFill:    "#3a2e00",
-    goodStroke:  "#fabd2f",
-    cashFlow:    "#fe8019",
-    contrib:     "#8ec07c",
-    p2p:         "#d3869b",
-    selected:    "#ebdbb2",
-    error:       "#fb4934",
-    warning:     "#fabd2f",
-    fg:          "#ebdbb2",
-    fg2:         "#bdae93",
-    bg:          "#282828",
-    bg1:         "#3c3836",
-    bg2:         "#504945",
+    personFill:  "#E6F4F4",
+    personStroke:"#159A97",
+    goodFill:    "#FEF0EE",
+    goodStroke:  "#F46E5D",
+    cashFlow:    "#F46E5D",
+    contrib:     "#159A97",
+    p2p:         "#9F7AEA",
+    selected:    "#1A202C",
+    error:       "#E53E3E",
+    warning:     "#ECC94B",
+    fg:          "#1A202C",
+    fg2:         "#4A5568",
+    bg:          "#FFFFFF",
+    bg1:         "#F5F7FA",
+    bg2:         "#E2E8F0",
   };
 
   /* ── state ──────────────────────────────────────────── */
@@ -314,38 +314,23 @@ const GraphView = (() => {
       const isGood = node.kind === "good";
       panel.innerHTML = `
         <h4>${isGood ? "Good" : "Person"}</h4>
-        <label>ID</label>
-        <input type="text" id="ep-id" value="${esc(node.id)}" />
         <label>Display name</label>
         <input type="text" id="ep-name" value="${esc(node.display_name || "")}" />
-        ${isGood ? `<label>Total (cents)</label>
-        <input type="number" id="ep-total" value="${node.stated_total_cents ?? ""}" placeholder="optional" />` : ""}
+        ${isGood ? `<label>Total (cents, optional)</label>
+        <input type="number" id="ep-total" value="${node.stated_total_cents ?? ""}" placeholder="e.g. 2450 = €24.50" />` : ""}
         <div class="edit-actions">
-          <button id="ep-save">Save</button>
-          <button id="ep-del" class="btn-danger">Delete</button>
+          <button id="ep-save" class="save">Save</button>
+          <button id="ep-del" class="delete">Delete</button>
         </div>`;
 
       document.getElementById("ep-save").onclick = () => {
-        const newId   = document.getElementById("ep-id").value.trim();
         const newName = document.getElementById("ep-name").value.trim();
         const newTotal = isGood ? (document.getElementById("ep-total").value.trim() || null) : null;
 
-        if (newId && newId !== node.id) {
-          /* rename: update all edge references */
-          _graph.edges.forEach(e => {
-            if (e.from_id    === node.id) e.from_id    = newId;
-            if (e.to_id      === node.id) e.to_id      = newId;
-            if (e.person_id  === node.id) e.person_id  = newId;
-            if (e.good_id    === node.id) e.good_id    = newId;
-          });
-          node.id = newId;
-          _selected.id = newId;
-        }
         node.display_name = newName || node.id;
         if (isGood) node.stated_total_cents = newTotal != null ? parseInt(newTotal) : null;
         render();
-        renderInconsistencies(_issues);
-        renderEditPanel();
+        fireChange();
       };
 
       document.getElementById("ep-del").onclick = () => {
@@ -377,8 +362,8 @@ const GraphView = (() => {
           : `<label>Share value</label>
              <input type="number" id="ep-val" step="0.1" min="0" value="${edge.value ?? 1}" />`}
         <div class="edit-actions">
-          <button id="ep-save">Save</button>
-          <button id="ep-del" class="btn-danger">Delete</button>
+          <button id="ep-save" class="save">Save</button>
+          <button id="ep-del" class="delete">Delete</button>
         </div>`;
 
       document.getElementById("ep-save").onclick = () => {
@@ -415,20 +400,39 @@ const GraphView = (() => {
   }
 
   /* ── toolbar add actions ────────────────────────────── */
-  function addPerson() {
-    const id = uniqueId("person");
-    _graph.nodes.push({ id, kind: "person", display_name: id });
-    render();
-    fireChange();
-    selectItem("node", id);
+  function showAddPersonForm() {
+    const panel = panelEl();
+    panel.innerHTML = `
+      <h4>Add person</h4>
+      <label>Name</label>
+      <input type="text" id="ep-name" placeholder="Alice" />
+      <div class="edit-actions"><button id="ep-add" class="save">Add</button></div>`;
+    document.getElementById("ep-add").onclick = () => {
+      const name = document.getElementById("ep-name").value.trim();
+      if (!name) return;
+      const id = uniqueId("person");
+      _graph.nodes.push({ id, kind: "person", display_name: name });
+      render(); fireChange(); selectItem("node", id);
+    };
   }
 
-  function addGood() {
-    const id = uniqueId("good");
-    _graph.nodes.push({ id, kind: "good", display_name: id, stated_total_cents: null });
-    render();
-    fireChange();
-    selectItem("node", id);
+  function showAddGoodForm() {
+    const panel = panelEl();
+    panel.innerHTML = `
+      <h4>Add good</h4>
+      <label>Name</label>
+      <input type="text" id="ep-name" placeholder="Dinner" />
+      <label>Total (cents, optional)</label>
+      <input type="number" id="ep-total" placeholder="e.g. 2450 = €24.50" />
+      <div class="edit-actions"><button id="ep-add" class="save">Add</button></div>`;
+    document.getElementById("ep-add").onclick = () => {
+      const name = document.getElementById("ep-name").value.trim();
+      if (!name) return;
+      const raw = document.getElementById("ep-total").value.trim();
+      const id = uniqueId("good");
+      _graph.nodes.push({ id, kind: "good", display_name: name, stated_total_cents: raw ? parseInt(raw) : null });
+      render(); fireChange(); selectItem("node", id);
+    };
   }
 
   function showAddEdgeForm(kind) {
@@ -449,7 +453,7 @@ const GraphView = (() => {
         <select id="ep-to">${goods.map(g => `<option value="${esc(g.id)}">${esc(g.display_name||g.id)}</option>`).join("")}</select>
         <label>Amount (cents)</label>
         <input type="number" id="ep-amount" value="0" />
-        <div class="edit-actions"><button id="ep-add">Add</button></div>`;
+        <div class="edit-actions"><button id="ep-add" class="save">Add</button></div>`;
 
       document.getElementById("ep-add").onclick = () => {
         const from = document.getElementById("ep-from").value;
@@ -475,7 +479,7 @@ const GraphView = (() => {
         <select id="ep-good">${goods.map(g => `<option value="${esc(g.id)}">${esc(g.display_name||g.id)}</option>`).join("")}</select>
         <label>Share value</label>
         <input type="number" id="ep-val" step="0.1" min="0" value="1" />
-        <div class="edit-actions"><button id="ep-add">Add</button></div>`;
+        <div class="edit-actions"><button id="ep-add" class="save">Add</button></div>`;
 
       document.getElementById("ep-add").onclick = () => {
         const pid  = document.getElementById("ep-person").value;
@@ -534,8 +538,8 @@ const GraphView = (() => {
   /* wire toolbar buttons for any tab that has add buttons */
   document.addEventListener("DOMContentLoaded", () => {
     const actions = [
-      ["add-person",       addPerson],
-      ["add-good",         addGood],
+      ["add-person",       showAddPersonForm],
+      ["add-good",         showAddGoodForm],
       ["add-cashflow",     () => showAddEdgeForm("cash_flow")],
       ["add-contribution", () => showAddEdgeForm("contribution")],
     ];
