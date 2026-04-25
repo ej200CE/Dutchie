@@ -39,8 +39,10 @@ Nodes:
 
 Edges:
   cash_flow    — Person paid money for a Good (or sent money to another Person P2P)
-  contribution — Person should bear a share of a Good's cost (value=1.0 = equal share)
-                 contribution=0 means "this person does not share this cost"
+  contribution — Person should bear a share of a Good's cost
+                 value = 1.0   → equal weight with all other contributors (default)
+                 value = <N>   → proportional weight; actual share = N / Σ(all N for this good)
+                 value = 0     → this person does NOT share this cost (or omit the edge)
 
 ────────────────────────────────────────────
 STEP 1 — MERGE DUPLICATE GOODS (do this first, before building edges)
@@ -111,6 +113,36 @@ app fee, or bank charge. When a receipt for the same amount exists:
   • Do NOT conclude the payment is a subscription or personal expense.
 
 ────────────────────────────────────────────
+STEP 4 — UNEQUAL / PER-PERSON SPLITS
+────────────────────────────────────────────
+Use non-1.0 contribution values when evidence shows different shares.
+
+CASE A — Individual line items linked to specific seats:
+  When goods[].visual_cues + persons[].seat_or_position maps a dish to a seat,
+  give ONLY that person a contribution edge (value=1.0). Do NOT give every
+  participant a contribution to that line item.
+  Receipt: "carbonara (left seat, €14)" and "steak (right seat, €22)"
+    → good carbonara €14: only Alice contributes (value=1.0)
+    → good steak €22: only Bob contributes (value=1.0)
+
+CASE B — Different quantities of the same good:
+  Set value proportional to quantity consumed.
+  Alex had 2 beers, Charlie had 1 beer (same good beer_round):
+    → Alex value=2.0, Charlie value=1.0  (Alex pays 2/3, Charlie pays 1/3)
+
+CASE C — Explicit partial split from free_text / chat / receipt notes:
+  "Alice had the steak (€22), the others split the €30 starter equally"
+    → steak: Alice value=1.0 (sole contributor)
+    → starter: Bob value=1.0, Carol value=1.0, Dave value=1.0
+
+CASE D — One person abstained from a shared good:
+  Omit their contribution edge entirely (or set value=0.0).
+
+DEFAULT — No per-person breakdown available:
+  When only a shared total is known and no seat/dish attribution exists,
+  give everyone value=1.0. Do NOT invent unequal splits.
+
+────────────────────────────────────────────
 PRESENCE HINTS AND GROUP CONTRIBUTIONS
 ────────────────────────────────────────────
 When a presence_hint lists people at the same occasion as a spend:
@@ -153,7 +185,7 @@ No prose, no markdown fences.
       "edge_id": "ct-<good_id>-<person_id>",
       "person_id": "<person_id>",
       "good_id": "<good_id>",
-      "value": 1.0
+      "value": <float — 1.0 for equal share; use proportional weight when evidence shows unequal consumption (see STEP 4)>
     }
   ]
 }
@@ -172,6 +204,11 @@ HARD RULES
 - When ALL persons at an event shared an expense equally, give each of them a
   contribution edge (value=1.0) — do NOT leave anyone out just because they were
   not explicitly listed as participant_person_ids on the receipt item.
+- When evidence links a specific dish/item to a specific person (via seat, visual
+  cue, or explicit text), only that person gets a contribution to that good.
+  Use proportional value (see STEP 4) when quantities or amounts differ per person.
+- Never invent unequal splits — only use non-1.0 values when the evidence
+  explicitly supports it (seat attribution, quantity, or stated amounts).
 - If the evidence has multiple people_photo / presence items from the same venue, merge
   to one node per person before you count: persons[] should not list the same person twice
   under two appearance-based ids (e.g. adult_male_… from one file and young_adult_… from
