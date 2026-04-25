@@ -189,3 +189,46 @@ select {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
+
+/* ── Graph edit panel typography ────────────────────────────────────── */
+
+.mobile-graph-edit h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A202C;
+  margin: 0 0 6px;
+}
+
+.mobile-graph-edit .graph-empty {
+  color: #A0AEC0;
+  font-size: 12px;
+  text-align: center;
+  padding: 6px 0;
+}
+
+.mobile-graph-edit .edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mobile-graph-edit select {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 30px 6px 10px;
+  color: #1A202C;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23A0AEC0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.mobile-graph-edit select:focus {
+  border-color: #159A97;
+}
