@@ -113,7 +113,7 @@ async def home(request: Request) -> HTMLResponse:
 
 @app.get("/mobile", response_class=HTMLResponse)
 async def mobile_home(request: Request) -> HTMLResponse:
-    return mobile_templates.TemplateResponse(request, "mobile.html", {"request": request})
+    return mobile_templates.TemplateResponse(request, "mobile.html", {})
 
 
 @app.get("/api/dev/session")
