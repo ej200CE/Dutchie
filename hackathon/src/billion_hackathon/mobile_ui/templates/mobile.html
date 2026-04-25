@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Split the bill</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="/static/graph-view.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -119,44 +121,62 @@
 
   <!-- ── Screen 4: Review graph ─────────────────────────────────────── -->
   <section id="s-review" class="screen hidden flex flex-col min-h-screen">
-    <header class="p-6 pb-0 pt-safe">
-      <h2 class="text-xl font-bold text-fg">Review</h2>
-      <p class="text-fg3 text-sm mt-1">Check what we found. Tap to edit.</p>
+    <header class="px-6 pt-6 pb-0 pt-safe flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-fg">Review</h2>
+        <p class="text-fg3 text-sm mt-1">Check what we found. Tap to edit.</p>
+      </div>
+      <div class="flex bg-bg2 rounded-lg p-1 shrink-0 mt-1">
+        <button id="btn-view-list"
+          class="px-3 py-1 rounded-md text-sm font-medium bg-bg1 text-fg transition-colors">List</button>
+        <button id="btn-view-graph"
+          class="px-3 py-1 rounded-md text-sm font-medium text-fg3 transition-colors">Graph</button>
+      </div>
     </header>
 
-    <!-- Inconsistency banners -->
+    <!-- Inconsistency banners (visible in both views) -->
     <div id="review-issues" class="px-6 mt-3 flex flex-col gap-2"></div>
 
-    <!-- Tab bar -->
-    <div class="px-6 mt-4 flex gap-0 border-b border-bg2">
-      <button class="review-tab active-tab px-4 py-2 text-sm font-medium" data-pane="pane-people">People</button>
-      <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-goods">Goods</button>
-      <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-connections">Connections</button>
+    <!-- ── List view ── -->
+    <div id="review-list-view" class="flex flex-col flex-1 overflow-hidden">
+      <!-- Tab bar -->
+      <div class="px-6 mt-4 flex gap-0 border-b border-bg2">
+        <button class="review-tab active-tab px-4 py-2 text-sm font-medium" data-pane="pane-people">People</button>
+        <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-goods">Goods</button>
+        <button class="review-tab px-4 py-2 text-sm font-medium text-fg3" data-pane="pane-connections">Connections</button>
+      </div>
+
+      <!-- People pane -->
+      <div id="pane-people" class="review-pane flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
+        <div id="people-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-person"
+          class="mt-2 text-blue text-sm text-left px-1">+ Add person</button>
+      </div>
+
+      <!-- Goods pane -->
+      <div id="pane-goods" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
+        <div id="goods-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-good"
+          class="mt-2 text-blue text-sm text-left px-1">+ Add good</button>
+      </div>
+
+      <!-- Connections pane -->
+      <div id="pane-connections" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
+        <p class="text-fg3 text-xs uppercase tracking-wide mb-1">Cash flows (who paid)</p>
+        <div id="cashflow-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-cashflow" class="mt-2 text-blue text-sm text-left px-1">+ Add cash flow</button>
+
+        <p class="text-fg3 text-xs uppercase tracking-wide mt-4 mb-1">Contributions (who consumed)</p>
+        <div id="contribution-list" class="flex flex-col gap-2"></div>
+        <button id="btn-add-contribution" class="mt-2 text-blue text-sm text-left px-1">+ Add contribution</button>
+      </div>
     </div>
 
-    <!-- People pane -->
-    <div id="pane-people" class="review-pane flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
-      <div id="people-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-person"
-        class="mt-2 text-blue text-sm text-left px-1">+ Add person</button>
-    </div>
-
-    <!-- Goods pane -->
-    <div id="pane-goods" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
-      <div id="goods-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-good"
-        class="mt-2 text-blue text-sm text-left px-1">+ Add good</button>
-    </div>
-
-    <!-- Connections pane -->
-    <div id="pane-connections" class="review-pane hidden flex flex-col flex-1 overflow-y-auto px-6 py-4 gap-3">
-      <p class="text-fg3 text-xs uppercase tracking-wide mb-1">Cash flows (who paid)</p>
-      <div id="cashflow-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-cashflow" class="mt-2 text-blue text-sm text-left px-1">+ Add cash flow</button>
-
-      <p class="text-fg3 text-xs uppercase tracking-wide mt-4 mb-1">Contributions (who consumed)</p>
-      <div id="contribution-list" class="flex flex-col gap-2"></div>
-      <button id="btn-add-contribution" class="mt-2 text-blue text-sm text-left px-1">+ Add contribution</button>
+    <!-- ── Graph view ── -->
+    <div id="review-graph-view" class="hidden flex-1 flex flex-col overflow-hidden px-4 pt-3 gap-2">
+      <svg id="mobile-graph-svg" style="width:100%;height:52vh;display:block;"></svg>
+      <div id="mobile-graph-edit" class="mobile-graph-edit overflow-y-auto"></div>
+      <div id="mobile-graph-issues" class="flex flex-col gap-1 pb-2"></div>
     </div>
 
     <div class="px-6 pb-safe pb-6 pt-4 flex flex-col gap-3 border-t border-bg2 mt-auto">
